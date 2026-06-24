@@ -44,13 +44,20 @@ cx, cy = (gx.min() + gx.max()) / 2, (gy.min() + gy.max()) / 2
 rng = max(gx.max() - gx.min(), gy.max() - gy.min()) / 2 + 2
 RES = 0.25
 occ = OccupancyGrid(resolution=RES, range_m=rng, center_xy=(cx, cy),
-                    ground_band=cfg.ground_band_m, ceil=cfg.camera_height_m,
-                    occ_min_hits=3)
+                    ground_band=cfg.ground_band_m, ceil=cfg.camera_height_m)
 occ.integrate(pts, ground_z=0.0)
-grid = occ.grid()
-# 机器人走过的轨迹一定可通行 -> 把轨迹周围一段带标为 free (反映真实可通行走廊,
-# 保证自由空间连通、加宽骨架, 使 A* 贴着证实可通行的路线走)
-_TR = 3  # 轨迹自由带半径 (cell), ~0.75m -> 走廊宽 ~1.75m (贴合实际走廊, 让A*紧贴已证实可通行区)
+# 稳健判障: 障碍需 点密度≥4 且 垂直延展≥0.3m(真结构), 滤除 VGGT 悬浮噪声"虚构"障碍
+grid = occ.grid_robust(min_hits=4, min_vext=0.3)
+# 形态学: 去掉孤立小障碍簇(残余噪声), 保留真墙大块 -> "没有障碍处不虚构"
+from scipy import ndimage as _ndi
+_lbl, _n = _ndi.label(grid == 2, structure=np.ones((3, 3)))
+if _n > 0:
+    _sz = _ndi.sum(np.ones_like(_lbl), _lbl, np.arange(1, _n + 1))
+    _noise = np.isin(_lbl, np.where(_sz < 5)[0] + 1)
+    grid[_noise] = 1
+    print(f"占据: 稳健判障 + 清理噪声小簇 {int(_noise.sum())} 格")
+# 机器人走过的轨迹一定可通行 -> 把轨迹带标 free (仅补"未知", 不覆盖真障碍, 保"该有的有")
+_TR = 3
 _yy, _xx = np.ogrid[-_TR:_TR + 1, -_TR:_TR + 1]
 _disk = np.argwhere(_xx ** 2 + _yy ** 2 <= _TR ** 2) - _TR
 for c in traj["centers"]:
@@ -58,7 +65,7 @@ for c in traj["centers"]:
     j, i = int(ij[0]), int(ij[1])
     for di, dj in _disk:
         ii, jj = i + int(di), j + int(dj)
-        if 0 <= ii < grid.shape[0] and 0 <= jj < grid.shape[1]:
+        if 0 <= ii < grid.shape[0] and 0 <= jj < grid.shape[1] and grid[ii, jj] != 2:
             grid[ii, jj] = 1
 rows = ["".join(map(str, row)) for row in grid.tolist()]
 
