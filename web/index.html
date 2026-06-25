@@ -80,8 +80,17 @@
   .sw{width:13px;height:13px;border-radius:3px;display:inline-block}
   table.kv{width:100%;font-size:12px;border-collapse:collapse}
   table.kv td{padding:3px 0} table.kv td:last-child{text-align:right;color:#fff}
-  #fpv,#dbimg{width:100%;aspect-ratio:4/3;background:#04080f;border:1px solid var(--line);
+  #dbimg{width:100%;aspect-ratio:4/3;background:#04080f;border:1px solid var(--line);
     border-radius:7px;object-fit:cover;display:block;box-shadow:0 0 14px rgba(45,226,230,.15)}
+  /* 机器人视图: 4路环视 2x2, 按4鱼眼物理布局 (前左①/前右② // 后左④/后右③) */
+  .fpv4{display:grid;grid-template-columns:1fr 1fr;gap:4px;position:relative;margin-top:9px}
+  .fcam{position:relative;aspect-ratio:4/3;background:#04080f;border:1px solid var(--line);
+    border-radius:6px;overflow:hidden;box-shadow:0 0 8px rgba(45,226,230,.12)}
+  .fcam img{width:100%;height:100%;object-fit:cover;display:block}
+  .flbl{position:absolute;left:4px;top:3px;font-size:9.5px;color:var(--cyan);
+    background:rgba(4,10,18,.7);padding:1px 5px;border-radius:3px;letter-spacing:.5px}
+  .fpv4 .fwd{position:absolute;left:50%;top:-8px;transform:translateX(-50%);font-size:9px;
+    color:var(--green);background:var(--bg);padding:0 7px;letter-spacing:1px;border:1px solid rgba(92,255,157,.4);border-radius:8px}
   #dbimg{border-color:var(--mag)}
   #fpvcap{font-size:12px;color:var(--dim);margin-top:6px;min-height:16px}
   #fpvcap b{color:var(--cyan)}
@@ -131,9 +140,15 @@
         <div class="tele" id="tele"></div>
       </div>
       <div class="sec">
-        <h2>机器人视图 <span class="r pill" id="fpvPill">FPV</span></h2>
-        <img id="fpv" alt="robot view">
-        <div id="fpvcap">悬停 / 导航时显示最近数据库帧</div>
+        <h2>机器人视图 · 4环视 <span class="r pill" id="fpvPill">FPV</span></h2>
+        <div class="fpv4" id="fpv4">
+          <span class="fwd">▲ 前进方向</span>
+          <div class="fcam"><img data-c="1" alt="前左"><span class="flbl">前左 ①</span></div>
+          <div class="fcam"><img data-c="2" alt="前右"><span class="flbl">前右 ②</span></div>
+          <div class="fcam"><img data-c="4" alt="后左"><span class="flbl">后左 ④</span></div>
+          <div class="fcam"><img data-c="3" alt="后右"><span class="flbl">后右 ③</span></div>
+        </div>
+        <div id="fpvcap">悬停 / 导航时显示4路环视(前进方向朝上)</div>
       </div>
       <div class="sec">
         <h2>DB 节点详情 <span class="r pill" id="dbPill">未选</span></h2>
@@ -312,7 +327,15 @@ cv.addEventListener('wheel',e=>{e.preventDefault();
   view.scale=Math.max(2,Math.min(120,view.scale*f));
   view.cx=w[0]-(e.offsetX-W/2)/view.scale;view.cy=w[1]+(e.offsetY-H/2)/view.scale;staticDirty=true;},{passive:false});
 
-function showFPV(i){$('fpv').src=D.thumbs[i];
+// 4路环视: 按物理布局把4个相机缩略图填进2x2网格 (img 的 data-c 决定相机, 布局由HTML顺序定)
+function show4cam(i){
+  document.querySelectorAll('#fpv4 img').forEach(img=>{
+    const c=img.dataset.c;
+    img.onerror=function(){this.onerror=null;this.src=D.thumbs[i];};  // 缺4路图时回退camera_1
+    img.src=`thumbs/n${i}_c${c}.jpg`;
+  });
+}
+function showFPV(i){show4cam(i);
   $('fpvcap').innerHTML=`<b>${dbname[i]}</b> · DB帧#${D.dbfi[i]} · (${dbx[i].toFixed(1)}, ${dby[i].toFixed(1)})m`;}
 // 按机器人行进方向(世界角度,度)选朝向最匹配的环视相机, 显示"前进视角"
 function pickCam(i,travelDeg){let bc=0,bd=1e9;
@@ -446,8 +469,8 @@ function advanceAnim(ts){
       head=Math.atan2(path[i][1]-path[i-1][1],path[i][0]-path[i-1][0]);done=false;break;}acc+=seg;}
   anim.pos=pos;anim.head=head;
   const nd=nearestDB(pos[0],pos[1]);
-  const bc=pickCam(nd,anim.head*180/Math.PI);const key=nd*10+bc;
-  if(key!==anim.lastfpv){anim.lastfpv=key;showFPVcam(nd,bc);}
+  if(nd!==anim.lastfpv){anim.lastfpv=nd;show4cam(nd);
+    $('fpvcap').innerHTML=`<b>${dbname[nd]}</b> · 4路环视 · DB帧#${D.dbfi[nd]}`;}
   if(anim.frame++%4===0)updateTele();
   if(done){anim.playing=false;anim.done=true;updateTele();
     setPill('✓ 抵达',false);$('bPause').textContent='↺ 重播';
