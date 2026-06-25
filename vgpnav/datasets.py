@@ -40,11 +40,13 @@ DATASETS = {
     # 相机为同型号 AVM 鱼眼 (1920x1536), 复用 C8 内参 (camera_1/4 一组、2/3 一组, 与本数据 AVM 分组一致)。
     # extracted camera_1..4 = 外参表 AVM CAM 1..4:
     #   camera_1=左后(Yaw 142.5°), camera_2=左前(37.5°), camera_3=右前(-37.5°), camera_4=右后(-142.5°)。
-    # 相机离地 ≈ 1.65m: 身高 173cm 头顶, 头戴头盔后环视相机约在头部高度 (依据"头盔相机高度"图, 可后续校准)。
+    # 相机离地 ≈ 1.70m: 主锚 camera_1=AVM CAM1, "头盔相机高度"图示其在头盔底部边缘上方 95mm;
+    #   头盔底部边缘(帽壳下沿)约在头顶下方 12cm, 故离地 ≈ 身高173cm - 12cm + 9.5cm ≈ 170cm。
+    #   (若身高按 175cm 则 ≈ 1.72m; 最准应实测相机离地高度后改此值。)
     "ChuangfuTower": DatasetSpec(
         name="ChuangfuTower",
         data_dir="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/ChuangfuTower/extracted_data",
-        camera_height_m=1.65,
+        camera_height_m=1.70,
         cam_layout=[("左前", 2), ("右前", 3), ("左后", 1), ("右后", 4)],
         map_stride=1, n_query=8,
     ),
