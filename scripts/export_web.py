@@ -56,17 +56,24 @@ if _n > 0:
     _noise = np.isin(_lbl, np.where(_sz < 5)[0] + 1)
     grid[_noise] = 1
     print(f"占据: 稳健判障 + 清理噪声小簇 {int(_noise.sum())} 格")
-# 机器人走过的轨迹一定可通行 -> 把轨迹带标 free (仅补"未知", 不覆盖真障碍, 保"该有的有")
+# 机器人物理走过的轨迹必然可通行 -> 轨迹带强制标 free, 覆盖"漂移割裂"造成的虚构障碍。
+# 左下角等重访区机器人绕行两趟, 单目 VGGT 两趟重建尺度/位姿错位, 同一面墙裂成两个副本
+# 弥漫填满房间内部, 把走廊误判成障碍, 致 DB 节点被淹没、无法设起终点 (实测仅 21/209 可达)。
+# 轨迹半径 0.75m (机器人尺度) 无条件覆盖障碍 -> DB 节点全在轨迹上, 必连通可设起终点。
 _TR = 3
-_yy, _xx = np.ogrid[-_TR:_TR + 1, -_TR:_TR + 1]
-_disk = np.argwhere(_xx ** 2 + _yy ** 2 <= _TR ** 2) - _TR
+_disk = [(di, dj) for di in range(-_TR, _TR + 1) for dj in range(-_TR, _TR + 1)
+         if di * di + dj * dj <= _TR ** 2]
+_n_overwrite = 0
 for c in traj["centers"]:
     ij = occ.world_to_cell(c[:2])
     j, i = int(ij[0]), int(ij[1])
     for di, dj in _disk:
-        ii, jj = i + int(di), j + int(dj)
-        if 0 <= ii < grid.shape[0] and 0 <= jj < grid.shape[1] and grid[ii, jj] != 2:
+        ii, jj = i + di, j + dj
+        if 0 <= ii < grid.shape[0] and 0 <= jj < grid.shape[1]:
+            if grid[ii, jj] == 2:
+                _n_overwrite += 1
             grid[ii, jj] = 1
+print(f"占据: 轨迹走廊强制可通行, 覆盖虚构障碍 {_n_overwrite} 格 -> DB 节点可设起终点")
 rows = ["".join(map(str, row)) for row in grid.tolist()]
 
 # ---- 点云下采样 (按高度着色) ----

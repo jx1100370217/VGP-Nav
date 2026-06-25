@@ -372,7 +372,7 @@ function astar(s,g){
     let c=0,n=hf.length;while(true){let l=2*c+1,r=2*c+2,m=c;
       if(l<n&&hf[l]<hf[m])m=l;if(r<n&&hf[r]<hf[m])m=r;if(m===c)break;
       [hf[m],hf[c]]=[hf[c],hf[m]];[hid[m],hid[c]]=[hid[c],hid[m]];c=m;}return id0;}
-  gsc[si]=0;push(hh(si),si);const UNK=1.5;
+  gsc[si]=0;push(hh(si),si);const UNK=4;  // 未知格通行代价 1.5->4: A*更强偏好已知自由走廊, 绕开玻璃会议室等无点云的未观测区
   const nb=[[-1,0,1],[1,0,1],[0,-1,1],[0,1,1],[-1,-1,1.41421],[-1,1,1.41421],[1,-1,1.41421],[1,1,1.41421]];
   while(hf.length){const cur=pop();if(closed[cur])continue;closed[cur]=1;
     if(cur===gi){const p=[];let c=cur;while(c!==-1){const i=(c/NX)|0,j=c%NX;p.push(c2w(i,j));c=came[c];}return p.reverse();}
