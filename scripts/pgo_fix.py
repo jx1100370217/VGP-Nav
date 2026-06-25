@@ -55,7 +55,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sim", type=float, default=0.55, help="回环外观相似度阈值")
     ap.add_argument("--gap", type=int, default=40, help="回环最小序号间隔")
-    ap.add_argument("--dmax", type=float, default=12.0, help="回环当前空间距离上限(抗混叠)")
+    ap.add_argument("--dmax", type=float, default=4.0, help="回环当前空间距离上限: 4路回环检测下"
+                    "需收紧(矩形房间对边互相可见, 4路交叉会把对边误判为回环, dmax 过大会拉合对边致房间挤扁)")
     ap.add_argument("--wloop", type=float, default=3.0, help="回环边权重(相对里程计)")
     ap.add_argument("--topk", type=int, default=4, help="每帧保留前k个回环")
     args = ap.parse_args()
@@ -161,7 +162,7 @@ def main():
     p0[0::3], p0[1::3], p0[2::3] = x, y, psi
     print(f"PGO 求解: {N} 位姿, {len(edges)} 边, {M} 残差...")
     sol = least_squares(resid, p0, jac_sparsity=spar, loss="soft_l1",
-                        f_scale=0.5, max_nfev=400, verbose=1)
+                        f_scale=0.5, max_nfev=800, verbose=1)
     X, Y, P = unpack(sol.x)
 
     # ---- 4. 重构校正后 T_wc (Rz(Δψ)@R_old, z=1.3) ----
