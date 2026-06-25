@@ -73,25 +73,29 @@ def main():
     files = list_frame_files(cfg)
     print(f"轨迹 {N} 帧")
 
-    # ---- 1. 描述子 (缓存) ----
-    desc_path = os.path.join(cfg.db_dir, "allframe_desc.npy")
-    if os.path.exists(desc_path):
-        D = np.load(desc_path)
-        print(f"载入缓存描述子 {D.shape}")
+    # ---- 1. 描述子 + 回环相似度 (4路环视交叉) ----
+    # 机器人重访常"反向"经过同一地点 (如帧621/501): 单目 camera_1 此时看到的景象相反,
+    # 相似度低 (0.32) 会漏检回环 -> 该处回环不被 PGO 对齐 -> 建图割裂出虚假障碍。
+    # 改用4路环视交叉最大相似度 (任一路对任一路), 帧621/501 -> 0.77, 能识别反向回环。
+    desc4_path = os.path.join(cfg.db_dir, "allframe_desc_4cam.npy")
+    if os.path.exists(desc4_path):
+        D4 = np.load(desc4_path).astype(np.float32)            # (N,4,Dd)
+        D4 /= (np.linalg.norm(D4, axis=2, keepdims=True) + 1e-9)
+        print(f"载入4路描述子 {D4.shape}, 回环相似度=4路交叉最大")
+        Dflat = D4.reshape(len(D4) * 4, -1)
+        S = (Dflat @ Dflat.T).reshape(N, 4, N, 4).max(axis=(1, 3))  # (N,N) 4路交叉
     else:
-        print("计算 SelaVPR++ 描述子...")
-        vpr = make_vpr(cfg)
-        intr, dist = load_camera_params(cfg.cam_params, cfg.camera)
-        und = PinholeUndistorter(intr, dist, cfg.undist_w, cfg.undist_h,
-                                 cfg.undist_hfov, cfg.undist_pitch_down)
-        imgs = [und.undistort(cv2.imread(files[fi])) for fi in frame_idx]
-        D = vpr.describe(imgs).astype(np.float32)
-        np.save(desc_path, D)
-        print(f"描述子 {D.shape} 已缓存")
+        # 回退: 单目 camera_1 (旧行为, 漏检反向回环)
+        desc_path = os.path.join(cfg.db_dir, "allframe_desc.npy")
+        if not os.path.exists(desc_path):
+            raise SystemExit("缺 allframe_desc_4cam.npy, 请先跑 scripts/compute_4cam_desc.py")
+        D = np.load(desc_path).astype(np.float32)
+        D /= (np.linalg.norm(D, axis=1, keepdims=True) + 1e-9)
+        print(f"载入单目描述子 {D.shape} (回退, 会漏检反向回环)")
+        S = D @ D.T
 
     # ---- 2. 回环检测 ----
     C = poses[:, :3, 3]
-    S = D @ D.T
     loops = []
     for i in range(N):
         cand = [(j, S[i, j]) for j in range(i + args.gap, N)

@@ -46,8 +46,10 @@ RES = 0.25
 occ = OccupancyGrid(resolution=RES, range_m=rng, center_xy=(cx, cy),
                     ground_band=cfg.ground_band_m, ceil=cfg.camera_height_m)
 occ.integrate(pts, ground_z=0.0)
-# 稳健判障: 障碍需 点密度≥4 且 垂直延展≥0.3m(真结构), 滤除 VGGT 悬浮噪声"虚构"障碍
-grid = occ.grid_robust(min_hits=4, min_vext=0.3)
+# 稳健判障: 障碍需 点密度≥6 且 垂直延展≥0.3m(真结构), 滤除 VGGT 悬浮噪声"虚构"障碍。
+# 密度阈值 4->6: 4路回环PGO对齐后, 重访区真墙多趟点重合、密度高, 提阈值可滤掉对齐时
+# 重合的VGGT单帧噪声点(虚假障碍), 而真墙(高密度)保留; DB可达仍209/209(轨迹free兜底)。
+grid = occ.grid_robust(min_hits=6, min_vext=0.3)
 # 形态学: 去掉孤立小障碍簇(残余噪声), 保留真墙大块 -> "没有障碍处不虚构"
 from scipy import ndimage as _ndi
 _lbl, _n = _ndi.label(grid == 2, structure=np.ones((3, 3)))
