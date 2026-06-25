@@ -154,7 +154,13 @@
         <h2>DB 节点详情 <span class="r pill" id="dbPill">未选</span></h2>
         <div id="dbnone">单击地图上的青色 DB 节点查看其相机帧、地点名称与位姿。</div>
         <div id="dbdet" style="display:none">
-          <img id="dbimg" alt="db frame">
+          <div class="fpv4" id="db4">
+            <span class="fwd">▲ 前进方向</span>
+            <div class="fcam"><img data-c="1" alt="前左"><span class="flbl">前左 ①</span></div>
+            <div class="fcam"><img data-c="2" alt="前右"><span class="flbl">前右 ②</span></div>
+            <div class="fcam"><img data-c="4" alt="后左"><span class="flbl">后左 ④</span></div>
+            <div class="fcam"><img data-c="3" alt="后右"><span class="flbl">后右 ③</span></div>
+          </div>
           <div id="dbname">—</div>
           <table class="kv" id="dbkv"></table>
         </div>
@@ -328,13 +334,14 @@ cv.addEventListener('wheel',e=>{e.preventDefault();
   view.cx=w[0]-(e.offsetX-W/2)/view.scale;view.cy=w[1]+(e.offsetY-H/2)/view.scale;staticDirty=true;},{passive:false});
 
 // 4路环视: 按物理布局把4个相机缩略图填进2x2网格 (img 的 data-c 决定相机, 布局由HTML顺序定)
-function show4cam(i){
-  document.querySelectorAll('#fpv4 img').forEach(img=>{
+function fill4(container, i){
+  document.querySelectorAll(container+' img').forEach(img=>{
     const c=img.dataset.c;
     img.onerror=function(){this.onerror=null;this.src=D.thumbs[i];};  // 缺4路图时回退camera_1
     img.src=`thumbs/n${i}_c${c}.jpg`;
   });
 }
+function show4cam(i){ fill4('#fpv4', i); }   // 机器人视图(导航FPV)的4环视
 function showFPV(i){show4cam(i);
   $('fpvcap').innerHTML=`<b>${dbname[i]}</b> · DB帧#${D.dbfi[i]} · (${dbx[i].toFixed(1)}, ${dby[i].toFixed(1)})m`;}
 // 按机器人行进方向(世界角度,度)选朝向最匹配的环视相机, 显示"前进视角"
@@ -349,7 +356,7 @@ function selectDB(i){selDB=i;
   if(i<0){$('dbdet').style.display='none';$('dbnone').style.display='block';
     $('dbPill').textContent='未选';$('dbPill').className='r pill';return;}
   $('dbnone').style.display='none';$('dbdet').style.display='block';
-  $('dbimg').src=D.thumbs[i];$('dbname').textContent=dbname[i];
+  fill4('#db4', i);$('dbname').textContent=dbname[i];
   $('dbPill').textContent='#'+D.dbfi[i];$('dbPill').className='r pill live';
   $('dbkv').innerHTML=
     `<tr><td>地点名称</td><td>${dbname[i]}</td></tr>
