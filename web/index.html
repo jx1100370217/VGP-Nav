@@ -141,26 +141,14 @@
       </div>
       <div class="sec">
         <h2>机器人视图 · 4环视 <span class="r pill" id="fpvPill">FPV</span></h2>
-        <div class="fpv4" id="fpv4">
-          <span class="fwd">▲ 前进方向</span>
-          <div class="fcam"><img data-c="1" alt="前左"><span class="flbl">前左 ①</span></div>
-          <div class="fcam"><img data-c="2" alt="前右"><span class="flbl">前右 ②</span></div>
-          <div class="fcam"><img data-c="4" alt="后左"><span class="flbl">后左 ④</span></div>
-          <div class="fcam"><img data-c="3" alt="后右"><span class="flbl">后右 ③</span></div>
-        </div>
+        <div class="fpv4" id="fpv4"></div>
         <div id="fpvcap">悬停 / 导航时显示4路环视(前进方向朝上)</div>
       </div>
       <div class="sec">
         <h2>DB 节点详情 <span class="r pill" id="dbPill">未选</span></h2>
         <div id="dbnone">单击地图上的青色 DB 节点查看其相机帧、地点名称与位姿。</div>
         <div id="dbdet" style="display:none">
-          <div class="fpv4" id="db4">
-            <span class="fwd">▲ 前进方向</span>
-            <div class="fcam"><img data-c="1" alt="前左"><span class="flbl">前左 ①</span></div>
-            <div class="fcam"><img data-c="2" alt="前右"><span class="flbl">前右 ②</span></div>
-            <div class="fcam"><img data-c="4" alt="后左"><span class="flbl">后左 ④</span></div>
-            <div class="fcam"><img data-c="3" alt="后右"><span class="flbl">后右 ③</span></div>
-          </div>
+          <div class="fpv4" id="db4"></div>
           <div id="dbname">—</div>
           <table class="kv" id="dbkv"></table>
         </div>
@@ -334,6 +322,12 @@ cv.addEventListener('wheel',e=>{e.preventDefault();
   view.cx=w[0]-(e.offsetX-W/2)/view.scale;view.cy=w[1]+(e.offsetY-H/2)/view.scale;staticDirty=true;},{passive:false});
 
 // 4路环视: 按物理布局把4个相机缩略图填进2x2网格 (img 的 data-c 决定相机, 布局由HTML顺序定)
+// 按数据集 cam_layout 动态生成4环视2x2格子 (前进方向恒在上排; 不同数据集相机物理布局不同)
+function buildGrid(id){
+  const lay=(D.cam_layout&&D.cam_layout.length===4)?D.cam_layout:[["前左",1],["前右",2],["后左",4],["后右",3]];
+  $(id).innerHTML='<span class="fwd">▲ 前进方向</span>'+
+    lay.map(p=>`<div class="fcam"><img data-c="${p[1]}"><span class="flbl">${p[0]} ${p[1]}</span></div>`).join('');
+}
 function fill4(container, i){
   document.querySelectorAll(container+' img').forEach(img=>{
     const c=img.dataset.c;
@@ -509,7 +503,7 @@ function fillSidebar(){
      <tr><td>节点命名</td><td>${named?'Qwen3-VL-4B':'未生成'}</td></tr>`;
 }
 window.addEventListener('resize',()=>resize());
-fillSidebar();resize();fitView();showFPV(0);updateTele();staticDirty=true;requestAnimationFrame(render);
+buildGrid('fpv4');buildGrid('db4');fillSidebar();resize();fitView();showFPV(0);updateTele();staticDirty=true;requestAnimationFrame(render);
 </script>
 </body>
 </html>

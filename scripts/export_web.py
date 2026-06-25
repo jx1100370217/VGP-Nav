@@ -113,6 +113,8 @@ data = {
     "occ": {"res": RES, "ox": float(occ.origin[0]), "oy": float(occ.origin[1]),
             "nx": int(grid.shape[1]), "ny": int(grid.shape[0]), "rows": rows},
     "thumbs": thumbs,
+    "cam_layout": cfg.cam_layout,   # 4环视2x2物理布局 [(方位,相机号)] 左上,右上,左下,右下
+    "dataset": cfg.dataset,
 }
 nn_path = os.path.join(cfg.db_dir, "node_names.json")
 if os.path.exists(nn_path):
