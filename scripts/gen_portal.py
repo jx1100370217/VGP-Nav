@@ -17,10 +17,7 @@ OUT = os.path.join(_PROJ, "outputs")
 
 # 友好显示名(没有则用数据集名)。加数据集时可在此补一行中文名。
 LABELS = {
-    "Mapping_C8": "深港国际C8",
-    "ChuangfuTower": "创富大厦28楼",
-    "Mappingdata_C7": "深港国际C7",
-    "Mappingdata_Firstfloor": "深港国际1楼",
+    "ChuangfuTower_floor1": "创富大厦1楼",
 }
 
 maps = []
