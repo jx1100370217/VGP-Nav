@@ -131,7 +131,13 @@ with open(os.path.join(WEB_OUT, "data.js"), "w") as f:
     f.write("window.VGPDATA = ")
     json.dump(data, f, separators=(",", ":"))
     f.write(";\n")
-shutil.copy(os.path.join(WEB_SRC, "index.html"),
-           os.path.join(WEB_OUT, "index.html"))
+# 各数据集页 = 纯导航 (nav.html; 供总应用导航tab嵌入, 也可单独访问 /{ds}/web/)
+_nav = os.path.join(WEB_SRC, "nav.html")
+shutil.copy(_nav if os.path.exists(_nav) else os.path.join(WEB_SRC, "index.html"),
+            os.path.join(WEB_OUT, "index.html"))
+# 总入口 = 多地图三tab总应用 (portal.html → outputs/index.html)
+_portal = os.path.join(WEB_SRC, "portal.html")
+if os.path.exists(_portal):
+    shutil.copy(_portal, os.path.join(os.path.dirname(cfg.out_dir.rstrip("/")), "index.html"))
 sz = os.path.getsize(os.path.join(WEB_OUT, "data.js")) / 1e6
-print(f"导出完成 -> {WEB_OUT} (data.js {sz:.1f} MB, 点{len(P)}, 栅格{grid.shape})")
+print(f"导出完成 -> {WEB_OUT} (data.js {sz:.1f} MB, 点{len(P)}, 栅格{grid.shape}); 总应用 -> outputs/index.html")

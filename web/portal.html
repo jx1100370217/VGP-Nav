@@ -1,0 +1,152 @@
+<!DOCTYPE html><html lang="zh"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VGP-Nav · 多地图可视化</title>
+<style>
+:root{--cyan:#2de2e6;--green:#5cff9d;--mag:#ff2a6d;--amber:#ffcf48;--bg:#060a12;--panel:rgba(13,22,38,.82);--line:rgba(45,226,230,.25);--txt:#cfe9ee;--dim:#6f8b96}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:-apple-system,system-ui,"Microsoft YaHei",monospace;overflow:hidden}
+#app{display:flex;flex-direction:column;height:100vh}
+header{display:flex;align-items:center;gap:16px;padding:9px 18px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,rgba(45,226,230,.08),transparent 60%);flex-wrap:wrap}
+.brand{font-size:16px;letter-spacing:1.5px;color:#fff;font-weight:700;white-space:nowrap}.brand .ac{color:var(--cyan)}
+.maintabs{display:flex;gap:6px}
+.mtab{background:rgba(45,226,230,.06);border:1px solid var(--line);color:var(--dim);padding:7px 15px;border-radius:8px;cursor:pointer;font:inherit;font-size:13px;transition:.15s}
+.mtab:hover{background:rgba(45,226,230,.14);color:var(--txt)}.mtab.on{background:var(--cyan);color:#04121a;font-weight:700;box-shadow:0 0 14px rgba(45,226,230,.5)}
+.dssel{display:flex;gap:5px;margin-left:auto;align-items:center;flex-wrap:wrap}.dssel .lbl{font-size:11px;color:var(--dim)}
+.dtab{background:#15203a;border:1px solid #26365a;color:#9fb3d1;padding:5px 11px;border-radius:6px;cursor:pointer;font:inherit;font-size:12px;white-space:nowrap}
+.dtab:hover{background:#1c2a48}.dtab.on{background:rgba(92,255,157,.85);color:#04121a;font-weight:700}
+main{flex:1;position:relative;min-height:0}
+.view{position:absolute;inset:0;display:none;flex-direction:column;overflow:auto;padding:16px 20px}
+.view.show{display:flex}#navView{padding:0!important}
+iframe{width:100%;height:100%;border:0;background:var(--bg)}
+.vhead{display:flex;align-items:center;gap:12px;margin-bottom:14px}.vhead h2{font-size:14px;color:var(--cyan)}
+.muted{color:var(--dim);font-size:12px}
+.pipe{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
+.pstep{flex:1;min-width:160px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;cursor:pointer;position:relative;transition:.15s}
+.pstep:hover{border-color:var(--cyan)}.pstep.sel{border-color:var(--cyan);box-shadow:0 0 14px rgba(45,226,230,.3)}
+.pstep .pnum{font-size:10.5px;color:var(--dim)}.pstep .plab{font-size:12px;color:#fff;margin:5px 0;min-height:33px;line-height:1.4}
+.pstep .pstat{font-size:11px;font-weight:600}.pstep.done .pstat{color:var(--green)}.pstep.todo .pstat{color:var(--dim)}.pstep.run .pstat{color:var(--amber)}
+.pdot{position:absolute;top:11px;right:11px;width:9px;height:9px;border-radius:50%;background:var(--dim)}
+.pstep.done .pdot{background:var(--green);box-shadow:0 0 8px var(--green)}.pstep.run .pdot{background:var(--amber);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.3}}
+.pbody{display:flex;gap:16px;flex:1;min-height:300px}
+.pviz{flex:2;min-width:0}.pviz h3{font-size:12px;color:var(--cyan);margin-bottom:8px}.pviz img{width:100%;border:1px solid var(--line);border-radius:8px;background:#04080f}
+.pside{flex:1;min-width:230px;display:flex;flex-direction:column;gap:10px}
+.btn{background:rgba(92,255,157,.12);border:1px solid rgba(92,255,157,.5);color:var(--green);padding:9px;border-radius:7px;cursor:pointer;font:inherit;font-size:12.5px}
+.btn:hover{background:rgba(92,255,157,.22)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.plog{background:#04080f;border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;line-height:1.5;color:var(--green);flex:1;min-height:240px;overflow:auto;white-space:pre-wrap}
+.addbar{display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.addbar input{background:#04080f;border:1px solid var(--line);color:var(--txt);border-radius:5px;padding:5px 8px;font:inherit;font-size:12px}
+.dbmgr{display:flex;gap:16px;flex:1;min-height:0}
+.dbtable{flex:1;overflow:auto;border:1px solid var(--line);border-radius:8px}.dbtable table{width:100%;border-collapse:collapse;font-size:12px}
+.dbtable th{position:sticky;top:0;background:#0d1626;color:var(--cyan);padding:8px;text-align:left;font-size:11px;border-bottom:1px solid var(--line)}
+.dbtable td{padding:6px 8px;border-bottom:1px solid rgba(45,226,230,.1)}.dbtable tr:hover{background:rgba(45,226,230,.06)}.dbtable tr.sel{background:rgba(45,226,230,.14)}
+.ibtn{background:rgba(45,226,230,.1);border:1px solid var(--line);color:var(--txt);border-radius:5px;padding:3px 8px;cursor:pointer;font-size:11px;font:inherit;margin-right:3px}
+.ibtn:hover{background:rgba(45,226,230,.22)}.ibtn.del{border-color:rgba(255,42,109,.4);color:var(--mag)}
+.dbside{flex:0 0 280px}.dbside h3{font-size:12px;color:var(--cyan);margin-bottom:8px}
+.fpv4{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:4px;aspect-ratio:4/3;background:#04080f;border:1px solid var(--line);border-radius:8px;padding:4px}
+.fcam{position:relative;overflow:hidden;border-radius:4px;background:#070b14}.fcam img{width:100%;height:100%;object-fit:cover;display:block}
+.flbl{position:absolute;top:2px;left:2px;font-size:9px;background:rgba(6,10,18,.7);color:var(--cyan);padding:1px 4px;border-radius:3px}
+.fwd{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:var(--amber);z-index:2;pointer-events:none}
+</style></head>
+<body>
+<div id="app">
+<header>
+  <span class="brand">VGP·NAV <span class="ac">◢</span></span>
+  <div class="maintabs">
+    <button class="mtab on" data-v="build">🏗️ 建图流程</button>
+    <button class="mtab" data-v="nav">🧭 导航演示</button>
+    <button class="mtab" data-v="db">📍 DB节点管理</button>
+  </div>
+  <div class="dssel"><span class="lbl">地图:</span><span id="dstabs"></span></div>
+</header>
+<main>
+  <section id="buildView" class="view show">
+    <div class="vhead"><h2 id="bTitle">🏗️ 建图流程 · 从原始数据到导航地图</h2>
+      <button class="btn" id="bRunAll" style="flex:0 0 auto">▶ 一键全流程</button>
+      <span class="muted">点步骤看产物图 · 运行此步监控进度</span></div>
+    <div class="pipe" id="pipe"></div>
+    <div class="pbody">
+      <div class="pviz"><h3 id="pvizTitle">← 选择步骤查看其建图产物</h3>
+        <img id="pvizImg" style="display:none"><div id="pvizNone" class="muted">选有产物图的步骤(①③⑤⑦⑧)查看;其余为中间数据。</div></div>
+      <div class="pside"><button class="btn" id="pRun" disabled>▶ 运行选中步骤</button>
+        <div class="muted">实时日志</div><div class="plog" id="plog">（选步骤并运行后显示进度）</div></div>
+    </div>
+  </section>
+  <section id="navView" class="view"><iframe id="navFrame" src="about:blank"></iframe></section>
+  <section id="dbView" class="view">
+    <div class="vhead"><h2 id="dbTitle">📍 DB 节点管理</h2><span class="muted">增删改后到「建图流程」重跑⑧导出地图,导航端才生效</span></div>
+    <div class="addbar">➕ 从轨迹帧添加:<input id="addFrame" placeholder="帧号" style="width:100px"><input id="addName" placeholder="名称(可选)" style="width:150px"><button class="ibtn" id="addBtn">添加节点</button><span id="addMsg" class="muted"></span></div>
+    <div class="dbmgr">
+      <div class="dbtable"><table><thead><tr><th>#</th><th>帧号</th><th>名称</th><th>X</th><th>Y</th><th>操作</th></tr></thead><tbody id="dbRows"></tbody></table></div>
+      <div class="dbside"><h3>节点 · 4环视</h3><div class="fpv4" id="db4"></div><div id="dbInfo" class="muted">← 点左侧节点查看4路环视</div></div>
+    </div>
+  </section>
+</main>
+</div>
+<script>
+let curDS=null,curTab='build',_poll=null,_curStep=null,_meta={},_queue=[],_layout=null,_nodes=[];
+const $=id=>document.getElementById(id);
+const views={build:$('buildView'),nav:$('navView'),db:$('dbView')};
+fetch('/api/datasets').then(r=>r.json()).then(ds=>{
+  const built=ds.filter(d=>d.built),box=$('dstabs');
+  built.forEach((d,i)=>{const b=document.createElement('button');b.className='dtab'+(i===0?' on':'');b.textContent=d.label;b.dataset.ds=d.name;b.onclick=()=>switchDS(d.name);box.appendChild(b);});
+  if(built.length){curDS=built[0].name;renderTab();}
+});
+function switchDS(ds){curDS=ds;[...$('dstabs').children].forEach(b=>b.classList.toggle('on',b.dataset.ds===ds));renderTab();}
+document.querySelectorAll('.mtab').forEach(b=>b.onclick=()=>{
+  curTab=b.dataset.v;document.querySelectorAll('.mtab').forEach(x=>x.classList.toggle('on',x===b));
+  Object.entries(views).forEach(([k,v])=>v.classList.toggle('show',k===curTab));renderTab();
+});
+function renderTab(){ if(!curDS)return;
+  if(curTab==='build')loadPipeline();
+  else if(curTab==='nav'){const u='/'+curDS+'/web/index.html';if($('navFrame').src.indexOf(u)<0)$('navFrame').src=u;}
+  else if(curTab==='db')loadDB();
+}
+// 建图
+function loadPipeline(){ fetch('/api/pipeline/'+curDS+'/status').then(r=>r.json()).then(r=>{
+  const pipe=$('pipe');pipe.innerHTML='';
+  r.steps.forEach((s,i)=>{_meta[s.key]=s;const d=document.createElement('div');
+    d.className='pstep '+(s.done?'done':'todo')+(_curStep===s.key?' sel':'');d.dataset.key=s.key;
+    d.innerHTML='<div class="pdot"></div><div class="pnum">步骤 '+(i+1)+'/8'+(s.slow?' · 较慢':'')+'</div><div class="plab">'+s.label+'</div><div class="pstat">'+(s.done?'✓ 已完成':'○ 未运行')+'</div>';
+    d.onclick=()=>selStep(s.key);pipe.appendChild(d);});
+  if(r.running){_curStep=r.running;markRun(r.running);pollLog();}
+});}
+function markRun(k){document.querySelectorAll('.pstep').forEach(d=>{const on=d.dataset.key===k;d.classList.toggle('run',on);if(on)d.querySelector('.pstat').textContent='⟳ 运行中…';});}
+function selStep(k){_curStep=k;const s=_meta[k];if(!s)return;
+  document.querySelectorAll('.pstep').forEach(d=>d.classList.toggle('sel',d.dataset.key===k));
+  $('pvizTitle').textContent=s.label;const img=$('pvizImg'),none=$('pvizNone');
+  if(s.viz){img.src='/'+curDS+'/'+s.viz+'?t='+Date.now();img.style.display='block';none.style.display='none';}
+  else{img.style.display='none';none.style.display='block';none.textContent='该步产出中间数据(无图)。可点运行重跑。';}
+  $('pRun').disabled=false;}
+$('pRun').onclick=()=>runStep(_curStep);
+function runStep(k){if(!k)return;fetch('/api/pipeline/'+curDS+'/run/'+k,{method:'POST'}).then(r=>r.json()).then(r=>{
+  if(r.error){$('plog').textContent='⚠ '+r.error;return;}markRun(k);$('plog').textContent='启动中…';pollLog();});}
+$('bRunAll').onclick=()=>fetch('/api/pipeline/'+curDS+'/status').then(r=>r.json()).then(r=>{_queue=r.steps.map(s=>s.key);runNext();});
+function runNext(){if(!_queue.length){loadPipeline();return;}const k=_queue.shift();_curStep=k;selStep(k);runStep(k);}
+function pollLog(){clearInterval(_poll);_poll=setInterval(()=>fetch('/api/pipeline/'+curDS+'/log').then(r=>r.json()).then(r=>{
+  const l=$('plog');l.textContent=r.log.join('\n')||'…';l.scrollTop=l.scrollHeight;
+  if(r.done){clearInterval(_poll);loadPipeline();if(_curStep)selStep(_curStep);if(_queue.length)runNext();}}),1200);}
+// DB
+function buildGrid(id){const lay=(_layout&&_layout.length===4)?_layout:[["前左",1],["前右",2],["后左",4],["后右",3]];
+  $(id).innerHTML='<span class="fwd">▲前进</span>'+lay.map(p=>'<div class="fcam"><img data-c="'+p[1]+'"><span class="flbl">'+p[0]+' '+p[1]+'</span></div>').join('');}
+function loadDB(){fetch('/api/db/'+curDS).then(r=>r.json()).then(r=>{
+  _nodes=r.nodes;_layout=r.cam_layout;$('dbTitle').textContent='📍 DB 节点管理 · '+(r.label||curDS)+' · '+r.nodes.length+'个';
+  const tb=$('dbRows');tb.innerHTML='';
+  r.nodes.forEach(n=>{const tr=document.createElement('tr');
+    tr.innerHTML='<td>'+n.idx+'</td><td>'+n.frame_idx+'</td><td>'+(n.name||'<span style="color:#6f8b96">—</span>')+'</td><td>'+n.x+'</td><td>'+n.y+'</td><td><button class="ibtn rn">✏️</button><button class="ibtn del rm">🗑️</button></td>';
+    tr.querySelector('.rn').onclick=e=>{e.stopPropagation();renameNode(n.idx);};
+    tr.querySelector('.rm').onclick=e=>{e.stopPropagation();delNode(n.idx);};
+    tr.onclick=()=>{document.querySelectorAll('#dbRows tr').forEach(x=>x.classList.remove('sel'));tr.classList.add('sel');showNode(n);};
+    tb.appendChild(tr);});
+});}
+function renameNode(idx){const c=_nodes.find(n=>n.idx===idx);const name=prompt('节点名称:',c?c.name:'');if(name===null)return;
+  fetch('/api/db/'+curDS+'/'+idx,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name})}).then(()=>loadDB());}
+function delNode(idx){if(!confirm('删除节点 #'+idx+'?(需重跑⑧导出地图生效)'))return;
+  fetch('/api/db/'+curDS+'/'+idx,{method:'DELETE'}).then(()=>loadDB());}
+$('addBtn').onclick=()=>{const f=parseInt($('addFrame').value),name=$('addName').value;
+  if(isNaN(f)){$('addMsg').textContent='请输入帧号';return;}
+  fetch('/api/db/'+curDS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({frame_idx:f,name})}).then(r=>r.json()).then(r=>{$('addMsg').textContent=r.error?('⚠ '+r.error):('✓ 已添加, 共'+r.n);if(!r.error)loadDB();});};
+function showNode(n){buildGrid('db4');
+  document.querySelectorAll('#db4 img').forEach(img=>{const c=img.dataset.c;img.onerror=function(){this.style.opacity=.15;};img.src='/'+curDS+'/web/thumbs/n'+n.idx+'_c'+c+'.jpg';});
+  $('dbInfo').innerHTML='节点 #'+n.idx+' · 帧 '+n.frame_idx+'<br>'+(n.name||'未命名')+'<br>('+n.x+', '+n.y+') m';}
+</script></body></html>

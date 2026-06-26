@@ -38,6 +38,9 @@ PIPELINE = [
     {"key": "export_web", "label": "⑧ 导出最终地图 (占据+导航)", "produces": "web/data.js", "viz": "query/global_occupancy.png"},
 ]
 
+LABELS = {"Mapping_C8": "深港国际C8", "ChuangfuTower": "创富大厦28楼",
+          "Mappingdata_C7": "深港国际C7", "Mappingdata_Firstfloor": "深港国际1楼"}
+
 _jobs = {}        # ds -> {step, log[], done, rc, proc}
 _lock = threading.Lock()
 
@@ -90,7 +93,8 @@ def static_file(p):
 # ───────────────────────── 数据集 ─────────────────────────
 @app.route("/api/datasets")
 def api_datasets():
-    return jsonify([{"name": n, "built": os.path.exists(os.path.join(out_dir(n), "web", "data.js"))}
+    return jsonify([{"name": n, "label": LABELS.get(n, n),
+                     "built": os.path.exists(os.path.join(out_dir(n), "web", "data.js"))}
                     for n in DATASETS])
 
 
@@ -176,7 +180,8 @@ def api_db_list(ds):
              for i in range(len(fi))]
     trf = os.path.join(db_dir(ds), "trajectory.npz")
     traj_frames = [int(x) for x in np.load(trf)["frame_idx"]] if os.path.exists(trf) else []
-    return jsonify({"nodes": nodes, "traj_frames": traj_frames})
+    return jsonify({"nodes": nodes, "traj_frames": traj_frames,
+                    "cam_layout": DATASETS[ds].cam_layout, "label": LABELS.get(ds, ds)})
 
 
 @app.route("/api/db/<ds>/<int:idx>", methods=["PUT"])
