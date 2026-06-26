@@ -20,7 +20,7 @@ class Config:
     # ---- 数据集选择 (见 datasets.DATASETS) ----
     # 默认读环境变量 VGPNAV_DATASET (没有则 Mapping_C8); 也可显式 Config(dataset="名字")。
     # 这样所有脚本里的 cfg=Config() 无需改动, 跑别的数据集只需 export VGPNAV_DATASET=名字。
-    dataset: str = field(default_factory=lambda: os.environ.get("VGPNAV_DATASET", "Mapping_C8"))
+    dataset: str = field(default_factory=lambda: os.environ.get("VGPNAV_DATASET", "ChuangfuTower_floor1"))
 
     # ---- 路径 (留空 → 按 dataset 自动填) ----
     memory_nav_root: str = "/home/ubuntu/Disk/codes/jianxiong/memory-nav"

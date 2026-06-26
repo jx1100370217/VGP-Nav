@@ -33,7 +33,7 @@ traj_idx = [int(v) for v in traj["frame_idx"]]
 traj_poses = traj["poses"]
 files1 = list_frame_files(cfg)
 cams = ["camera_1", "camera_2", "camera_3", "camera_4"]
-und = {c: PinholeUndistorter(*load_camera_params(cfg.cam_params, c),
+und = {c: PinholeUndistorter(load_camera_params(cfg.cam_params, c),
                              cfg.undist_w, cfg.undist_h, cfg.undist_hfov) for c in cams}
 vggt = VGGTRunner(cfg)
 rng = np.random.default_rng(0)

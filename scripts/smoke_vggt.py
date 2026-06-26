@@ -27,9 +27,9 @@ OUT = os.path.join(HERE, "outputs", "smoke")
 DEVICE = "cuda:3"
 os.makedirs(OUT, exist_ok=True)
 
-intr, dist = load_camera_params(PARAMS, CAM)
+params = load_camera_params(PARAMS, CAM)
 print("内参:", intr, "畸变:", dist)
-und = PinholeUndistorter(intr, dist, out_w=640, out_h=480, hfov_deg=110.0)
+und = PinholeUndistorter(params, out_w=640, out_h=480, hfov_deg=110.0)
 print("虚拟针孔 K=\n", und.K)
 
 files = sorted(glob.glob(os.path.join(DATA, f"*_{CAM}.jpg")))

@@ -23,8 +23,8 @@ os.makedirs(THUMBS, exist_ok=True)
 cams = ["camera_1", "camera_2", "camera_3", "camera_4"]
 und = {}
 for c in cams:
-    intr, dist = load_camera_params(cfg.cam_params, c)
-    und[c] = PinholeUndistorter(intr, dist, cfg.undist_w, cfg.undist_h, cfg.undist_hfov)
+    params = load_camera_params(cfg.cam_params, c)
+    und[c] = PinholeUndistorter(params, cfg.undist_w, cfg.undist_h, cfg.undist_hfov)
 
 files1 = list_frame_files(cfg)   # camera_1 文件 (与 db.frame_idx 对应)
 nmiss = 0

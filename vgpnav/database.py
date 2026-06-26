@@ -127,8 +127,8 @@ def build_database(cfg):
     traj_idx = list(range(0, n, cfg.map_stride))
     print(f"轨迹帧 {len(traj_idx)} (map_stride={cfg.map_stride})")
 
-    intr, dist = load_camera_params(cfg.cam_params, cfg.camera)
-    und = PinholeUndistorter(intr, dist, cfg.undist_w, cfg.undist_h,
+    params = load_camera_params(cfg.cam_params, cfg.camera)
+    und = PinholeUndistorter(params, cfg.undist_w, cfg.undist_h,
                              cfg.undist_hfov, cfg.undist_pitch_down)
     vggt = VGGTRunner(cfg)
 
@@ -231,9 +231,9 @@ class Database:
     @property
     def und(self):
         if self._und is None:
-            intr, dist = load_camera_params(self.cfg.cam_params, self.cfg.camera)
+            params = load_camera_params(self.cfg.cam_params, self.cfg.camera)
             self._und = PinholeUndistorter(
-                intr, dist, self.cfg.undist_w, self.cfg.undist_h,
+                params, self.cfg.undist_w, self.cfg.undist_h,
                 self.cfg.undist_hfov, self.cfg.undist_pitch_down)
         return self._und
 

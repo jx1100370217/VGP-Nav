@@ -21,7 +21,7 @@ from vgpnav.undistort import PinholeUndistorter, load_camera_params
 cfg = Config()
 vpr = make_vpr(cfg)
 cams = ["camera_1", "camera_2", "camera_3", "camera_4"]
-und = {c: PinholeUndistorter(*load_camera_params(cfg.cam_params, c),
+und = {c: PinholeUndistorter(load_camera_params(cfg.cam_params, c),
                              cfg.undist_w, cfg.undist_h, cfg.undist_hfov) for c in cams}
 files1 = sorted(glob.glob(os.path.join(cfg.data_dir, "*_camera_1.jpg")))
 N = len(files1)

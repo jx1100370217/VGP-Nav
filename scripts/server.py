@@ -38,8 +38,7 @@ PIPELINE = [
     {"key": "export_web", "label": "⑧ 导出最终地图 (占据+导航)", "produces": "web/data.js", "viz": "query/global_occupancy.png"},
 ]
 
-LABELS = {"Mapping_C8": "深港国际C8", "ChuangfuTower": "创富大厦28楼",
-          "Mappingdata_C7": "深港国际C7", "Mappingdata_Firstfloor": "深港国际1楼"}
+LABELS = {"ChuangfuTower_floor1": "创富大厦1楼"}
 
 _jobs = {}        # ds -> {step, log[], done, rc, proc}
 _lock = threading.Lock()

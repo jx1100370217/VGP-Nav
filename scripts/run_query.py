@@ -45,7 +45,7 @@ nav = VGPNav(cfg, db, vpr, vggt)
 # 4 路环视 query 加载器 (定位统一 4 路: cam1 位姿锚 + cam2/3/4 补 360°几何/检索)
 from vgpnav.undistort import PinholeUndistorter, load_camera_params
 _QCAMS = ["camera_1", "camera_2", "camera_3", "camera_4"]
-_QUND = {c: PinholeUndistorter(*load_camera_params(cfg.cam_params, c),
+_QUND = {c: PinholeUndistorter(load_camera_params(cfg.cam_params, c),
                                cfg.undist_w, cfg.undist_h, cfg.undist_hfov)
          for c in _QCAMS}
 
