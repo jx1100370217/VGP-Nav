@@ -331,7 +331,7 @@ function buildGrid(id){
 function fill4(container, i){
   document.querySelectorAll(container+' img').forEach(img=>{
     const c=img.dataset.c;
-    img.onerror=function(){this.onerror=null;this.src=D.thumbs[i];};  // 缺4路图时回退camera_1
+    img.onerror=function(){this.onerror=null;this.style.opacity=.2;};  // 缺图时变暗(不再内联base64)
     img.src=`thumbs/n${i}_c${c}.jpg`;
   });
 }
@@ -343,7 +343,7 @@ function pickCam(i,travelDeg){let bc=0,bd=1e9;
   for(let c=0;c<4;c++){const a=headDeg(i)+CAMOFF[c];
     let d=Math.abs(((a-travelDeg)%360+540)%360-180);if(d<bd){bd=d;bc=c;}}return bc;}
 function showFPVcam(i,c){const el=$('fpv');
-  el.onerror=()=>{el.onerror=null;el.src=D.thumbs[i];};
+  el.onerror=()=>{el.onerror=null;el.style.opacity=.2;};
   el.src=`thumbs/n${i}_c${c+1}.jpg`;
   $('fpvcap').innerHTML=`<b>${dbname[i]}</b> · 前进视角(cam${c+1}·${CAMDIR[c]}) · DB帧#${D.dbfi[i]}`;}
 function selectDB(i){selDB=i;
@@ -365,7 +365,7 @@ function updatePreview(which){
   const img=el.querySelector('.pimg'),nm=el.querySelector('.pn'),hb=el.querySelector('.ph b');
   if(!p){img.style.visibility='hidden';nm.textContent='未设';hb.textContent='—';return;}
   const nd=nearestDB(p.x,p.y);
-  img.src=D.thumbs[nd];img.style.visibility='visible';
+  img.src=`thumbs/n${nd}_c1.jpg`;img.style.visibility='visible';
   hb.textContent=`(${p.x.toFixed(1)}, ${p.y.toFixed(1)})`;
   nm.innerHTML=`${dbname[nd]}<br><span class="pco">最近 DB帧#${D.dbfi[nd]}</span>`;}
 

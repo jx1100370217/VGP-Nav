@@ -92,14 +92,8 @@ P = pts[m]
 if len(P) > 28000:
     P = P[np.random.default_rng(0).choice(len(P), 28000, replace=False)]
 
-# ---- DB 缩略图 (base64) ----
-print(f"生成 {len(db.frame_idx)} 张 DB 缩略图...")
-thumbs = []
-for fi in db.frame_idx:
-    img = db.image(int(fi))
-    th = cv2.resize(img, (384, 288), interpolation=cv2.INTER_AREA)
-    ok, buf = cv2.imencode(".jpg", th, [cv2.IMWRITE_JPEG_QUALITY, 72])
-    thumbs.append("data:image/jpeg;base64," + base64.b64encode(buf).decode())
+# DB 缩略图改用 web/thumbs/ 下的 jpg 文件(export_cams 生成), 不再 base64 内联进 data.js。
+# 内联会让 data.js 膨胀(358节点≈9MB, 加载慢); 引用文件后 data.js 只剩几何数据(~1-2MB)。
 
 data = {
     "meta": {
@@ -119,7 +113,6 @@ data = {
     "px": cm(P[:, 0]), "py": cm(P[:, 1]), "ph": cm(P[:, 2]),
     "occ": {"res": RES, "ox": float(occ.origin[0]), "oy": float(occ.origin[1]),
             "nx": int(grid.shape[1]), "ny": int(grid.shape[0]), "rows": rows},
-    "thumbs": thumbs,
     "cam_layout": cfg.cam_layout,   # 4环视2x2物理布局 [(方位,相机号)] 左上,右上,左下,右下
     "dataset": cfg.dataset,
 }

@@ -33,7 +33,7 @@ DATASETS = {
         camera_height_m=1.67,
         cam_layout=[("左前", 2), ("右前", 3), ("左后", 1), ("右后", 4)],
         cam_params="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/ChuangfuTower_floor1/camera_param.json",
-        map_stride=3, n_query=25,   # 3215→~1072帧(间距0.24m), 兼顾 DB 密度与 VGGT 基线
+        map_stride=5, n_query=25,   # 643帧(间距0.40m); 实测 stride=3(0.24m)基线太小、点云更杂乱
     ),
 }
 
