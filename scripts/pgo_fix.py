@@ -55,8 +55,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sim", type=float, default=0.55, help="回环外观相似度阈值")
     ap.add_argument("--gap", type=int, default=40, help="回环最小序号间隔")
-    ap.add_argument("--dmax", type=float, default=4.0, help="回环当前空间距离上限: 4路回环检测下"
-                    "需收紧(矩形房间对边互相可见, 4路交叉会把对边误判为回环, dmax 过大会拉合对边致房间挤扁)")
+    ap.add_argument("--dmax", type=float, default=4.0, help="近距离回环的空间距离上限(米): 此距离内只需 sim>--sim "
+                    "即认回环(局部重访)。超过此距离则需 sim>--simfar。")
+    ap.add_argument("--simfar", type=float, default=0.85, help="远距离(超dmax)回环的高相似阈值: 大漂移真闭环外观极相似"
+                    "(实测C7首尾闭环 0.90-0.93), 对边/中距离误判中等(<0.83)。用高阈值抓真闭环、不靠空间距离 —— "
+                    "解'dmax小漏大漂移闭环 / dmax大误判对边'两难。C8远距离最高仅0.717, 故 simfar=0.85 时 C8 零变化。")
     ap.add_argument("--wloop", type=float, default=3.0, help="回环边权重(相对里程计)")
     ap.add_argument("--topk", type=int, default=4, help="每帧保留前k个回环")
     args = ap.parse_args()
@@ -95,18 +98,30 @@ def main():
         print(f"载入单目描述子 {D.shape} (回退, 会漏检反向回环)")
         S = D @ D.T
 
-    # ---- 2. 回环检测 ----
+    # ---- 2. 回环检测 (分层: 近距离靠相似+空间近; 远距离靠高相似抓大漂移闭环) ----
     C = poses[:, :3, 3]
     loops = []
+    n_near = n_far = 0
     for i in range(N):
-        cand = [(j, S[i, j]) for j in range(i + args.gap, N)
-                if S[i, j] > args.sim and np.linalg.norm(C[i, :2] - C[j, :2]) < args.dmax]
+        cand = []
+        for j in range(i + args.gap, N):
+            s = float(S[i, j])
+            dd = float(np.linalg.norm(C[i, :2] - C[j, :2]))
+            # 近距离: 中等相似即可(局部重访, 建图空间已近);
+            # 远距离: 必须高相似(大漂移真闭环 —— 同地点但因漂移建图远; 排除对边/巧合误判)。
+            if s > args.sim and dd < args.dmax:
+                cand.append((j, s, 0))
+            elif s > args.simfar:
+                cand.append((j, s, 1))
         cand.sort(key=lambda t: -t[1])
-        for j, sim in cand[:args.topk]:
+        for j, sim, far in cand[:args.topk]:
             loops.append((i, j, float(sim)))
+            n_far += far
+            n_near += 1 - far
     # 去重 (i,j)
     loops = list({(min(i, j), max(i, j)): (i, j, s) for i, j, s in loops}.values())
-    print(f"回环边 {len(loops)} (sim>{args.sim}, gap>{args.gap}, dmax<{args.dmax}m)")
+    print(f"回环边 {len(loops)} (检测: 近<{args.dmax}m&sim>{args.sim} {n_near}个; "
+          f"远距离大漂移闭环 sim>{args.simfar} {n_far}个)")
     if loops:
         dd = [np.linalg.norm(C[i, :2] - C[j, :2]) for i, j, _ in loops]
         print(f"  回环对当前空间距离: 中位={np.median(dd):.2f} 最大={max(dd):.2f} m (=待消除的漂移)")
