@@ -50,6 +50,22 @@ DATASETS = {
         cam_layout=[("左前", 2), ("右前", 3), ("左后", 1), ("右后", 4)],
         map_stride=1, n_query=8,
     ),
+    # 以下两个数据集所有参数同 C8: 小车环视, 相机离地 1.3m, 同型号 AVM 鱼眼(复用 C8 内参),
+    # 布局 camera_1前左/camera_2前右/camera_3后右/camera_4后左。
+    "Mappingdata_C7": DatasetSpec(
+        name="Mappingdata_C7",
+        data_dir="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/Mappingdata_C7",
+        camera_height_m=1.3,
+        cam_layout=[("前左", 1), ("前右", 2), ("后左", 4), ("后右", 3)],
+        map_stride=1, n_query=25,
+    ),
+    "Mappingdata_Firstfloor": DatasetSpec(
+        name="Mappingdata_Firstfloor",
+        data_dir="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/Mappingdata_Firstfloor",
+        camera_height_m=1.3,
+        cam_layout=[("前左", 1), ("前右", 2), ("后左", 4), ("后右", 3)],
+        map_stride=1, n_query=25,
+    ),
 }
 
 
