@@ -39,9 +39,16 @@ def cm(a):
 
 
 # ---- 全局占据栅格 (供 JS 端 A*) ----
+# 栅格范围用【轨迹 bbox + margin】, 而非点云全部范围 ——
+# VGGT 在玻璃/反光/远景处会产生离群远点, 把点云范围撑大几倍(floor1 实测 45m 轨迹被撑到 460m),
+# 导致栅格巨大、data.js 臃肿、地图视觉杂乱。改用轨迹包围盒定范围, 并裁剪范围外的离群点。
+_tc = traj["centers"]
+cx, cy = (_tc[:, 0].min() + _tc[:, 0].max()) / 2, (_tc[:, 1].min() + _tc[:, 1].max()) / 2
+rng = max(_tc[:, 0].max() - _tc[:, 0].min(), _tc[:, 1].max() - _tc[:, 1].min()) / 2 + 5
+_inr = (np.abs(pts[:, 0] - cx) <= rng) & (np.abs(pts[:, 1] - cy) <= rng)
+print(f"点云裁剪: {len(pts)} -> {int(_inr.sum())} (去轨迹范围外离群点; 范围±{rng:.1f}m)")
+pts = pts[_inr]
 gx, gy = pts[:, 0], pts[:, 1]
-cx, cy = (gx.min() + gx.max()) / 2, (gy.min() + gy.max()) / 2
-rng = max(gx.max() - gx.min(), gy.max() - gy.min()) / 2 + 2
 RES = 0.25
 occ = OccupancyGrid(resolution=RES, range_m=rng, center_xy=(cx, cy),
                     ground_band=cfg.ground_band_m, ceil=cfg.camera_height_m)
