@@ -24,20 +24,24 @@ cams = ["camera_1", "camera_2", "camera_3", "camera_4"]
 und = {c: PinholeUndistorter(load_camera_params(cfg.cam_params, c),
                              cfg.undist_w, cfg.undist_h, cfg.undist_hfov) for c in cams}
 files1 = sorted(glob.glob(os.path.join(cfg.data_dir, "*_camera_1.jpg")))
-N = len(files1)
-print(f"轨迹帧 {N}, 算4路 SelaVPR 描述子...", flush=True)
+# 只对轨迹帧(map_stride 抽样后)算描述子, 与 trajectory.npz / PGO 帧集严格一致;
+# 否则 map_stride>1 时按全帧算会与 PGO 的轨迹帧数不匹配 (索引错位 -> 回环检测失效)。
+traj = np.load(os.path.join(cfg.db_dir, "trajectory.npz"))
+frame_idx = [int(x) for x in traj["frame_idx"]]      # files1 的索引 (0, stride, 2*stride, ...)
+N = len(frame_idx)
+print(f"轨迹帧 {N} (从 {len(files1)} 全帧按 map_stride 抽样), 算4路 SelaVPR 描述子...", flush=True)
 descs = None
 t0 = time.time()
-for f in range(N):
-    ts = os.path.basename(files1[f]).split("_camera_1")[0]
+for k in range(N):
+    ts = os.path.basename(files1[frame_idx[k]]).split("_camera_1")[0]
     ims = [und[c].undistort(cv2.imread(os.path.join(cfg.data_dir, ts + "_" + c + ".jpg")))
            for c in cams]
     d = vpr.describe(ims).astype(np.float32)        # (4, D)
     if descs is None:
         descs = np.zeros((N, 4, d.shape[1]), np.float32)
-    descs[f] = d
-    if f % 50 == 0:
-        print("  %d/%d (%.0fs)" % (f, N, time.time() - t0), flush=True)
+    descs[k] = d
+    if k % 50 == 0:
+        print("  %d/%d (%.0fs)" % (k, N, time.time() - t0), flush=True)
 out = os.path.join(cfg.db_dir, "allframe_desc_4cam.npy")
 np.save(out, descs)
 print(f"已保存 {out} {descs.shape} 用时%.0fs" % (time.time() - t0), flush=True)
