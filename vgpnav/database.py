@@ -138,8 +138,22 @@ def build_database(cfg):
     placed = [i for i in traj_idx if i in global_T]
     poses = np.stack([global_T[i] for i in placed])     # (M,4,4)
 
-    # ---- 全局重力对齐 (所有帧平均, 鲁棒) ----
-    g_down = SR.estimate_gravity_down([T[:3, :3] for T in poses])
+    # ---- 全局重力对齐 (IMU 自标定优先; 否则视觉) ----
+    # 头盔头部运动让"相机平均朝向"估的重力抖动(floor1 相机高度 std 偏大主因)。
+    # imu.csv 存在时: 用 IMU 加速度计真重力 + VGGT 位姿自标定 R_cam<-imu(外参不全),
+    # 输出 world 重力方向 -> 更稳的地面/z 对齐。
+    imu_csv = os.path.join(cfg.data_dir, "imu.csv")
+    poses_R = [T[:3, :3] for T in poses]
+    if os.path.exists(imu_csv):
+        from . import imu as IMU
+        ts_i, lin_i = IMU.load_imu(imu_csv)
+        frame_ts = [float(os.path.basename(files[i]).split("_camera")[0]) for i in placed]
+        g_imu = IMU.gravity_imu_for(frame_ts, ts_i, lin_i)
+        g_down, _, _resid = IMU.solve_world_gravity(poses_R, g_imu)
+        print(f"重力对齐: IMU 自标定 (帧间一致性残差 {_resid:.1f}°)")
+    else:
+        g_down = SR.estimate_gravity_down(poses_R)
+        print("重力对齐: 视觉(相机平均朝向)")
     R_align = SR.rotation_align(g_down, np.array([0, 0, -1.0]))
     poses_a = poses.copy()
     for j in range(len(poses_a)):
