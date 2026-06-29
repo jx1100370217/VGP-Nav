@@ -217,7 +217,7 @@ function resize(){W=cv.clientWidth;H=cv.clientHeight;
   off.width=W*DPR;off.height=H*DPR;octx.setTransform(DPR,0,0,DPR,0,0);staticDirty=true;}
 
 // ---- 状态 ----
-const layers={points:true,occ:true,traj:true,db:true,query:false};
+const layers={points:false,occ:true,traj:true,db:true,query:false};
 let mode='idle', start=null, goal=null, path=null, hoverDB=-1, selDB=-1;
 let anim=null, staticDirty=true, pathStat=null;
 
@@ -227,27 +227,34 @@ function heightColor(hm){const t=Math.max(0,Math.min(1,hm/1.9));
 
 // ---- 静态层 ----
 function renderStatic(){
-  octx.clearRect(0,0,W,H);octx.fillStyle='#060a12';octx.fillRect(0,0,W,H);
-  octx.strokeStyle='rgba(45,226,230,.06)';octx.lineWidth=1;
-  const step=5*view.scale;let o0=w2s(Math.ceil(M.bounds[0]/5)*5,0)[0];
-  for(let x=o0%step;x<W;x+=step){octx.beginPath();octx.moveTo(x,0);octx.lineTo(x,H);octx.stroke();}
-  let oy=w2s(0,Math.floor(M.bounds[3]/5)*5)[1];
-  for(let y=oy%step;y<H;y+=step){octx.beginPath();octx.moveTo(0,y);octx.lineTo(W,y);octx.stroke();}
-  if(layers.occ){octx.fillStyle='rgba(255,42,109,.5)';const cs=Math.max(1,occ.res*view.scale);
-    for(let i=0;i<occ.ny;i++)for(let j=0;j<occ.nx;j++) if(grid[i*occ.nx+j]===2){
+  octx.clearRect(0,0,W,H);
+  // 占据栅格灰度图(柔和冷色调,护眼不刺): 未知=暗灰蓝底, 可通行=中灰蓝, 障碍(墙)=深
+  octx.fillStyle='#555d68';octx.fillRect(0,0,W,H);
+  if(layers.occ){const cs=Math.ceil(occ.res*view.scale)+1;   // +1 填满格缝, 去网格感
+    for(let i=0;i<occ.ny;i++)for(let j=0;j<occ.nx;j++){
+      const id=i*occ.nx+j,v=grid[id];
+      // 连续可达区(mainRegion)=中灰蓝 free; 障碍只画贴着可达区的(=墙),滤掉远处孤立噪声碎片; 其余=背景
+      let col=null;
+      if(mainRegion[id]===1){col='#9ba6b3';}
+      else if(v===2){
+        for(let di=-1;di<=1&&!col;di++)for(let dj=-1;dj<=1;dj++){
+          const ni=i+di,nj=j+dj;
+          if(ni>=0&&ni<occ.ny&&nj>=0&&nj<occ.nx&&mainRegion[ni*occ.nx+nj]===1){col='#2a2f38';break;}}}
+      if(!col)continue;
       const s=w2s(occ.ox+(j+.5)*occ.res,occ.oy+(i+.5)*occ.res);
-      if(s[0]<-5||s[0]>W+5||s[1]<-5||s[1]>H+5)continue;octx.fillRect(s[0]-cs/2,s[1]-cs/2,cs,cs);}}
-  if(layers.points){let curBin=-1;const sz=Math.max(1.1,view.scale*0.05);
+      if(s[0]<-5||s[0]>W+5||s[1]<-5||s[1]>H+5)continue;
+      octx.fillStyle=col;
+      octx.fillRect(s[0]-cs/2,s[1]-cs/2,cs,cs);}}
+  if(layers.points){let curBin=-1;const sz=Math.max(1.1,view.scale*0.05);  // 彩色点云(默认关闭, 图层可选开)
     for(let k=0;k<NP;k++){const idx=order[k];const s=w2s(px[idx]/100,py[idx]/100);
       if(s[0]<0||s[0]>W||s[1]<0||s[1]>H)continue;
       const bin=Math.round(ph[idx]/100*8);if(bin!==curBin){curBin=bin;octx.fillStyle=heightColor(bin/8);}
       octx.fillRect(s[0],s[1],sz,sz);}}
-  if(layers.traj){octx.save();octx.shadowColor='#2de2e6';octx.shadowBlur=8;
-    octx.strokeStyle='rgba(45,226,230,.85)';octx.lineWidth=1.6;octx.beginPath();
+  if(layers.traj){octx.strokeStyle='rgba(70,150,180,.55)';octx.lineWidth=1.4;octx.beginPath();
     for(let i=0;i<traj.length;i++){const s=w2s(traj[i][0],traj[i][1]);i?octx.lineTo(s[0],s[1]):octx.moveTo(s[0],s[1]);}
-    octx.stroke();octx.restore();}
-  if(layers.db){octx.fillStyle='rgba(45,226,230,.9)';
-    for(let i=0;i<dbx.length;i++){const s=w2s(dbx[i],dby[i]);octx.beginPath();octx.arc(s[0],s[1],2.4,0,7);octx.fill();}}
+    octx.stroke();}
+  if(layers.db){octx.fillStyle='rgba(95,210,235,.85)';
+    for(let i=0;i<dbx.length;i++){const s=w2s(dbx[i],dby[i]);octx.beginPath();octx.arc(s[0],s[1],2.2,0,7);octx.fill();}}
   if(layers.query && D.qgx){for(let i=0;i<D.qgx.length;i++){
       const g=w2s(D.qgx[i]/100,D.qgy[i]/100),e=w2s(D.qex[i]/100,D.qey[i]/100);
       octx.strokeStyle='rgba(255,207,72,.5)';octx.lineWidth=1;
@@ -313,8 +320,8 @@ window.addEventListener('mouseup',e=>{
   if(wasMoved)return;
   const[mx,my]=canvasXY(e);if(mx<0||my<0||mx>W||my>H)return;
   const w=s2w(mx,my);
-  if(mode==='start'){start=snap(w);setMode('idle');updatePreview('start');updateTele();return;}
-  if(mode==='goal'){goal=snap(w);setMode('idle');updatePreview('goal');updateTele();return;}
+  if(mode==='start'){const nd=nearestDB(w[0],w[1]);start={x:dbx[nd],y:dby[nd],db:nd};setMode('idle');updatePreview('start');updateTele();return;}
+  if(mode==='goal'){const nd=nearestDB(w[0],w[1]);goal={x:dbx[nd],y:dby[nd],db:nd};setMode('idle');updatePreview('goal');updateTele();return;}
   selectDB(nearestNodeScreen(mx,my,20));});
 cv.addEventListener('wheel',e=>{e.preventDefault();
   const w=s2w(e.offsetX,e.offsetY);const f=e.deltaY<0?1.15:1/1.15;
@@ -384,6 +391,30 @@ function snap(w){const [i0,j0]=w2c(w[0],w[1]);
       if(Math.abs(di)!==r&&Math.abs(dj)!==r)continue;
       if(test(i0+di,j0+dj)){const c=c2w(i0+di,j0+dj);return {x:c[0],y:c[1],i:i0+di,j:j0+dj};}}
   return {x:w[0],y:w[1],i:i0,j:j0};}
+// ---- DB 拓扑图 A* (节点=DB节点; 边=轨迹顺序相邻 + 空间近回环捷径) ----
+// 栅格 A* 受 VGGT 占据碎片/未观测区影响会绕大圈; DB 图只沿机器人确实通行过的轨迹走, 鲁棒得多。
+const _dbOrd=[...Array(dbx.length).keys()].sort((a,b)=>D.dbfi[a]-D.dbfi[b]);  // 按帧号=轨迹时序
+const dbAdj=dbx.map(()=>[]);
+function _dbEdge(a,b){const d=Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b]);dbAdj[a].push([b,d]);dbAdj[b].push([a,d]);}
+// 阈值自适应 DB 节点间距 (floor1 校正后尺度大 ~13.6m/节点, floor28 室内 ~1.3m, 不能写死)
+const _gaps=[];for(let k=0;k+1<_dbOrd.length;k++)_gaps.push(Math.hypot(dbx[_dbOrd[k]]-dbx[_dbOrd[k+1]],dby[_dbOrd[k]]-dby[_dbOrd[k+1]]));
+_gaps.sort((a,b)=>a-b);const _medGap=_gaps[_gaps.length>>1]||2;
+const _adjMax=_medGap*5, _loopMax=_medGap*1.5;
+for(let k=0;k+1<_dbOrd.length;k++){const a=_dbOrd[k],b=_dbOrd[k+1];
+  if(Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b])<_adjMax)_dbEdge(a,b);}   // 时序相邻(轨迹连续); 跳变>5×中位=断点
+for(let a=0;a<dbx.length;a++)for(let b=a+1;b<dbx.length;b++)
+  if(Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b])<_loopMax)_dbEdge(a,b);   // 空间近(<1.5×中位)=回环/邻近捷径
+function astarDB(si,gi){
+  if(si<0||gi<0)return null;
+  const N=dbx.length,gsc=new Array(N).fill(Infinity),came=new Array(N).fill(-1),cl=new Array(N).fill(false);
+  const h=i=>Math.hypot(dbx[i]-dbx[gi],dby[i]-dby[gi]);
+  gsc[si]=0;const pq=[[h(si),si]];
+  while(pq.length){let bi=0;for(let i=1;i<pq.length;i++)if(pq[i][0]<pq[bi][0])bi=i;
+    const cur=pq.splice(bi,1)[0][1];if(cl[cur])continue;cl[cur]=true;
+    if(cur===gi){const p=[];let c=cur;while(c!==-1){p.push([dbx[c],dby[c]]);c=came[c];}return p.reverse();}
+    for(const[nb,w]of dbAdj[cur]){if(cl[nb])continue;const ng=gsc[cur]+w;
+      if(ng<gsc[nb]){gsc[nb]=ng;came[nb]=cur;pq.push([ng+h(nb),nb]);}}}
+  return null;}
 function astar(s,g){
   const NX=occ.nx,N=occ.nx*occ.ny;const gsc=new Float32Array(N);gsc.fill(Infinity);
   const came=new Int32Array(N).fill(-1);const closed=new Uint8Array(N);
@@ -440,7 +471,7 @@ $('bPause').onclick=()=>{if(!anim)return;
   setPill(anim.playing?'● 导航中':'已暂停',anim.playing);};
 $('bGo').onclick=()=>{
   if(!start||!goal){setPill('缺起/终点',false);return;}
-  const t0=performance.now();path=astar(start,goal);const ms=Math.round(performance.now()-t0);
+  const t0=performance.now();path=astarDB(start.db,goal.db);const ms=Math.round(performance.now()-t0);
   if(!path){setPill('无可行路径',false);
     $('tele').innerHTML='<div class="c" style="grid-column:1/4"><span>状态</span><b style="color:#ff2a6d">A* 未找到路径</b></div>';return;}
   let len=0,turns=0;

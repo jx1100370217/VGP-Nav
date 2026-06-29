@@ -62,6 +62,7 @@ def main():
                     "解'dmax小漏大漂移闭环 / dmax大误判对边'两难。C8远距离最高仅0.717, 故 simfar=0.85 时 C8 零变化。")
     ap.add_argument("--wloop", type=float, default=3.0, help="回环边权重(相对里程计)")
     ap.add_argument("--topk", type=int, default=4, help="每帧保留前k个回环")
+    ap.add_argument("--max_nfev", type=int, default=800, help="PGO 最大迭代次数 (大漂移真闭环需调大才收敛)")
     args = ap.parse_args()
 
     cfg = Config()
@@ -177,7 +178,7 @@ def main():
     p0[0::3], p0[1::3], p0[2::3] = x, y, psi
     print(f"PGO 求解: {N} 位姿, {len(edges)} 边, {M} 残差...")
     sol = least_squares(resid, p0, jac_sparsity=spar, loss="soft_l1",
-                        f_scale=0.5, max_nfev=800, verbose=1)
+                        f_scale=0.5, max_nfev=args.max_nfev, verbose=1)
     X, Y, P = unpack(sol.x)
 
     # ---- 4. 重构校正后 T_wc (Rz(Δψ)@R_old, z=1.3) ----
