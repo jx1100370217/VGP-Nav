@@ -205,15 +205,6 @@ for(const c of traj){const ci=Math.floor((c[1]-occ.oy)/occ.res),cj=Math.floor((c
     for(let s=1;s<=m;s++)_markCell(Math.round(_pc[0]+(ci-_pc[0])*s/m),Math.round(_pc[1]+(cj-_pc[1])*s/m));}
   else _markCell(ci,cj);
   _pc=[ci,cj];}
-// 距轨迹的格距离场(BFS): A* 把可走范围限制在轨迹走廊带内, 带外的玻璃会议室/开放区进不去。
-// 玻璃透明 -> VGGT 透过玻璃重建出室内地面 free, 纯栅格 A* 会穿玻璃; 唯一可靠是"机器人确实走过的轨迹"。
-const distTraj=new Int16Array(occ.nx*occ.ny).fill(-1);
-(function(){const q=[];for(let k=0;k<distTraj.length;k++)if(trajCell[k]){distTraj[k]=0;q.push(k);}
-  let qi=0;while(qi<q.length){const c=q[qi++];const ci=(c/occ.nx)|0,cj=c%occ.nx;
-    for(const[di,dj]of[[-1,0],[1,0],[0,-1],[0,1]]){const ni=ci+di,nj=cj+dj;
-      if(ni<0||ni>=occ.ny||nj<0||nj>=occ.nx)continue;const id=ni*occ.nx+nj;
-      if(distTraj[id]<0&&grid[id]!==2){distTraj[id]=distTraj[c]+1;q.push(id);}}}})();
-const NAV_BAND=3;   // 走廊带半径(格): 距轨迹>此值的自由格视为"没走过"不可走(挡玻璃室/开放区穿越)
 // 最大连通可通行区 (主导航区): snap 只吸附到此区, 保证起终点必连通 (避免孤立自由格)
 const mainRegion=new Uint8Array(occ.nx*occ.ny);
 (function(){const comp=new Int32Array(occ.nx*occ.ny).fill(-1);let best=-1,bestSz=0,cid=0;
@@ -433,7 +424,6 @@ function astar(s,g){
     const ci=(cur/NX)|0,cj=cur%NX;
     for(const[di,dj,w]of nb){const ni=ci+di,nj=cj+dj;if(ni<0||ni>=occ.ny||nj<0||nj>=NX)continue;
       const id=ni*NX+nj;if(blocked[id]||closed[id])continue;
-      if(!trajCell[id]&&(distTraj[id]<0||distTraj[id]>NAV_BAND))continue;  // 限轨迹走廊带: 带外(玻璃室/开放区, 机器人没走过)不可走
       const pen=(trajCell[id]||grid[id]===1)?1.0:UNK;const ng=gsc[cur]+w*occ.res*pen;
       if(ng<gsc[id]){gsc[id]=ng;came[id]=cur;push(ng+hh(id)*occ.res,id);}}}
   return null;}
