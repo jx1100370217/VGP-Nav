@@ -399,11 +399,19 @@ function _dbEdge(a,b){const d=Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b]);dbAdj[a].p
 // 阈值自适应 DB 节点间距 (floor1 校正后尺度大 ~13.6m/节点, floor28 室内 ~1.3m, 不能写死)
 const _gaps=[];for(let k=0;k+1<_dbOrd.length;k++)_gaps.push(Math.hypot(dbx[_dbOrd[k]]-dbx[_dbOrd[k+1]],dby[_dbOrd[k]]-dby[_dbOrd[k+1]]));
 _gaps.sort((a,b)=>a-b);const _medGap=_gaps[_gaps.length>>1]||2;
-const _adjMax=_medGap*5, _loopMax=_medGap*1.5;
+const _adjMax=_medGap*5, _losMax=_medGap*12;
+// 视线检查: 两节点直线穿过的占据格里障碍(grid==2)占比 -> 真墙连续挡(>12%)则不可直达; 容忍少量 VGGT 碎片
+function _losClear(a,b){const c0=w2c(dbx[a],dby[a]),c1=w2c(dbx[b],dby[b]);
+  const n=Math.max(Math.abs(c1[0]-c0[0]),Math.abs(c1[1]-c0[1]))||1;let bad=0;
+  for(let t=0;t<=n;t++){const i=Math.round(c0[0]+(c1[0]-c0[0])*t/n),j=Math.round(c0[1]+(c1[1]-c0[1])*t/n);
+    if(i<0||i>=occ.ny||j<0||j>=occ.nx)return false;
+    if(grid[i*occ.nx+j]===2)bad++;}
+  return bad<=Math.max(2,n*0.12);}
 for(let k=0;k+1<_dbOrd.length;k++){const a=_dbOrd[k],b=_dbOrd[k+1];
-  if(Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b])<_adjMax)_dbEdge(a,b);}   // 时序相邻(轨迹连续); 跳变>5×中位=断点
-for(let a=0;a<dbx.length;a++)for(let b=a+1;b<dbx.length;b++)
-  if(Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b])<_loopMax)_dbEdge(a,b);   // 空间近(<1.5×中位)=回环/邻近捷径
+  if(Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b])<_adjMax)_dbEdge(a,b);}   // 时序相邻(轨迹连续)
+// 空间捷径(走廊往返/环线两端): 放宽到 12×中位, 但要直线基本无障碍(占据视线验证防穿墙) -> 直达不绕时序
+for(let a=0;a<dbx.length;a++)for(let b=a+2;b<dbx.length;b++)
+  if(Math.hypot(dbx[a]-dbx[b],dby[a]-dby[b])<_losMax && _losClear(a,b))_dbEdge(a,b);
 function astarDB(si,gi){
   if(si<0||gi<0)return null;
   const N=dbx.length,gsc=new Array(N).fill(Infinity),came=new Array(N).fill(-1),cl=new Array(N).fill(false);
