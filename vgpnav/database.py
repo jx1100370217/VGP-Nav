@@ -163,6 +163,17 @@ def build_database(cfg):
 
     # ---- 单次全局地面峰 + 1.3m 尺度锚定 (鲁棒) ----
     anc = SR.anchor_map(poses_a[:, :3, 3], pts_a, cfg.camera_height_m)
+    if anc["scale"] < 0:
+        # 重力 down 被标反(IMU 自标定符号歧义 + VGGT 位姿噪声, floor28 室内位姿差时触发):
+        # 地面峰落到相机上方 -> scale<0 -> 整图镜像。物理上相机必在地面上方, 故翻转重力重对齐。
+        g_down = -g_down
+        R_align = SR.rotation_align(g_down, np.array([0, 0, -1.0]))
+        for j in range(len(poses_a)):
+            poses_a[j, :3, :3] = R_align @ poses[j, :3, :3]
+            poses_a[j, :3, 3] = R_align @ poses[j, :3, 3]
+        pts_a = pts @ R_align.T
+        anc = SR.anchor_map(poses_a[:, :3, 3], pts_a, cfg.camera_height_m)
+        print("  (检测到重力方向标反, 已翻转重对齐 -> scale 转正)")
     s, z_shift = anc["scale"], anc["z_shift"]
     poses_m = poses_a.copy()
     poses_m[:, :3, 3] *= s

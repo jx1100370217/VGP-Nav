@@ -49,7 +49,7 @@ _inr = (np.abs(pts[:, 0] - cx) <= rng) & (np.abs(pts[:, 1] - cy) <= rng)
 print(f"点云裁剪: {len(pts)} -> {int(_inr.sum())} (去轨迹范围外离群点; 范围±{rng:.1f}m)")
 pts = pts[_inr]
 gx, gy = pts[:, 0], pts[:, 1]
-RES = 0.25
+RES = round(2 * rng / 230, 3)   # 自适应分辨率: 尺度校正(apply_scale)后保持~230格, 避免栅格爆炸
 occ = OccupancyGrid(resolution=RES, range_m=rng, center_xy=(cx, cy),
                     ground_band=cfg.ground_band_m, ceil=cfg.camera_height_m)
 occ.integrate(pts, ground_z=0.0)
@@ -69,7 +69,7 @@ if _n > 0:
 # 左下角等重访区机器人绕行两趟, 单目 VGGT 两趟重建尺度/位姿错位, 同一面墙裂成两个副本
 # 弥漫填满房间内部, 把走廊误判成障碍, 致 DB 节点被淹没、无法设起终点 (实测仅 21/209 可达)。
 # 轨迹半径 0.75m (机器人尺度) 无条件覆盖障碍 -> DB 节点全在轨迹上, 必连通可设起终点。
-_TR = 3
+_TR = max(1, int(round(0.75 / RES)))   # 轨迹走廊物理半径~0.75m, 随分辨率自适应
 _disk = [(di, dj) for di in range(-_TR, _TR + 1) for dj in range(-_TR, _TR + 1)
          if di * di + dj * dj <= _TR ** 2]
 _n_overwrite = 0
