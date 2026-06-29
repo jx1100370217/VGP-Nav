@@ -30,7 +30,7 @@ app = Flask(__name__)
 PIPELINE = [
     {"key": "build_database", "label": "① 建库 · VGGT滑窗链式+地面锚定", "produces": "db/trajectory.npz", "viz": "database_overview.png", "slow": True},
     {"key": "compute_4cam_desc", "label": "② 4路环视描述子 · 回环检测用", "produces": "db/allframe_desc_4cam.npy", "viz": None, "slow": True},
-    {"key": "pgo_fix", "label": "③ 分层回环 PGO · 消漂移/闭环", "produces": "db/trajectory_pgo.npz", "viz": "query/pgo_before_after.png", "args": ["--sim", "0.70", "--dmax", "4"]},
+    {"key": "pgo_fix", "label": "③ 分层回环 PGO · 消漂移/闭环", "produces": "db/trajectory_pgo.npz", "viz": "query/pgo_before_after.png", "args": ["--sim", "0.70", "--dmax", "4", "--simfar", "0.85", "--max_nfev", "4000"]},
     {"key": "apply_pgo", "label": "④ 写回校正位姿", "produces": "db/trajectory_orig.npz", "viz": None},
     {"key": "build_4cam_points", "label": "⑤ 360°融合点云重建", "produces": "db/global_points_4cam.npz", "viz": "fourcam_test.png", "slow": True},
     {"key": "export_cams", "label": "⑥ 4路环视缩略图", "produces": "web/thumbs", "viz": None},
@@ -38,7 +38,7 @@ PIPELINE = [
     {"key": "export_web", "label": "⑧ 导出最终地图 (占据+导航)", "produces": "web/data.js", "viz": "query/global_occupancy.png"},
 ]
 
-LABELS = {"ChuangfuTower_floor1": "创富大厦1楼"}
+LABELS = {"ChuangfuTower_floor1": "创富大厦1楼", "ChuangfuTower_floor28": "创富大厦28楼", "Mapping_C8": "深港国际C8"}
 
 _jobs = {}        # ds -> {step, log[], done, rc, proc}
 _lock = threading.Lock()

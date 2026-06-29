@@ -35,6 +35,26 @@ DATASETS = {
         cam_params="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/ChuangfuTower_floor1/camera_param.json",
         map_stride=5, n_query=25,   # 643帧(间距0.40m); 实测 stride=3(0.24m)基线太小、点云更杂乱
     ),
+    # 创富大厦 28 楼, 同头盔设备 (复用同款 KB4 鱼眼内参 camera_param.json)。
+    # 短序列: 180 帧 / 3 分钟, map_stride=1 全用; 相机离地 1.67m, 布局同 floor1。
+    "ChuangfuTower_floor28": DatasetSpec(
+        name="ChuangfuTower_floor28",
+        data_dir="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/ChuangfuTower_floor28",
+        camera_height_m=1.67,
+        cam_layout=[("左前", 2), ("右前", 3), ("左后", 1), ("右后", 4)],
+        cam_params="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/ChuangfuTower_floor28/camera_param.json",
+        map_stride=1, n_query=10,
+    ),
+    # 深港国际 C8 (Mapping_C8): DEEPROUTE 一层, 626帧×4 鱼眼, MEI 相机模型(params.yaml)。
+    # 相机离地 1.3m; cam_layout 前左1/前右2/后左4/后右3。VGP-Nav 最早的测试数据集。
+    "Mapping_C8": DatasetSpec(
+        name="Mapping_C8",
+        data_dir="/home/ubuntu/Disk/codes/jianxiong/VGP-Nav/data/Mapping_C8",
+        camera_height_m=1.3,
+        cam_layout=[("前左", 1), ("前右", 2), ("后左", 4), ("后右", 3)],
+        cam_params="/home/ubuntu/Disk/codes/jianxiong/memory-nav/cam/params.yaml",
+        map_stride=1, n_query=25,
+    ),
 }
 
 
