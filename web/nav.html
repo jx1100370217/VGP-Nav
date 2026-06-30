@@ -228,7 +228,7 @@ function resize(){W=cv.clientWidth;H=cv.clientHeight;
   off.width=W*DPR;off.height=H*DPR;octx.setTransform(DPR,0,0,DPR,0,0);staticDirty=true;}
 
 // ---- 状态 ----
-const layers={points:false,occ:true,traj:true,db:true,query:false};
+const layers={points:true,occ:true,traj:true,db:true,query:false};
 let mode='idle', start=null, goal=null, path=null, hoverDB=-1, selDB=-1;
 let anim=null, staticDirty=true, pathStat=null;
 
@@ -256,7 +256,7 @@ function renderStatic(){
       if(s[0]<-5||s[0]>W+5||s[1]<-5||s[1]>H+5)continue;
       octx.fillStyle=col;
       octx.fillRect(s[0]-cs/2,s[1]-cs/2,cs,cs);}}
-  if(layers.points){let curBin=-1;const sz=Math.max(1.1,view.scale*0.05);  // 彩色点云(默认关闭, 图层可选开)
+  if(layers.points){let curBin=-1;const sz=Math.max(1.1,view.scale*0.05);  // 彩色点云(默认开, 图层可选关)
     for(let k=0;k<NP;k++){const idx=order[k];const s=w2s(px[idx]/100,py[idx]/100);
       if(s[0]<0||s[0]>W||s[1]<0||s[1]>H)continue;
       const bin=Math.round(ph[idx]/100*8);if(bin!==curBin){curBin=bin;octx.fillStyle=heightColor(bin/8);}

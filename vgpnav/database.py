@@ -194,14 +194,23 @@ def build_database(cfg):
 
     # ---- DB / query 划分 ----
     pos = np.arange(len(placed))
-    db_mask = (pos % cfg.db_sub == 0)
-    db_local = pos[db_mask]
-    nondb_local = pos[~db_mask]
-    if len(nondb_local) > cfg.n_query:
-        q_sel = np.linspace(0, len(nondb_local) - 1, cfg.n_query).astype(int)
-        query_local = nondb_local[q_sel]
+    if cfg.db_sub <= 1:
+        # 密 DB: query 均匀 held-out n_query 个, 其余全做 DB。
+        # DB 越密, 检索到的最近参考越贴近 query, 运动平均定位越准(短序列强混叠场景尤其有效)。
+        q_sel = np.linspace(0, len(pos) - 1, cfg.n_query + 2)[1:-1].astype(int)
+        query_mask = np.zeros(len(pos), dtype=bool)
+        query_mask[q_sel] = True
+        db_local = pos[~query_mask]
+        query_local = pos[query_mask]
     else:
-        query_local = nondb_local
+        db_mask = (pos % cfg.db_sub == 0)
+        db_local = pos[db_mask]
+        nondb_local = pos[~db_mask]
+        if len(nondb_local) > cfg.n_query:
+            q_sel = np.linspace(0, len(nondb_local) - 1, cfg.n_query).astype(int)
+            query_local = nondb_local[q_sel]
+        else:
+            query_local = nondb_local
     print(f"DB 帧 {len(db_local)}, query 帧 {len(query_local)}")
 
     # ---- DB 描述子 ----

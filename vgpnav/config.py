@@ -83,6 +83,7 @@ class Config:
         self.cam_layout = self.cam_layout if self.cam_layout is not None else spec.cam_layout
         self.map_stride = self.map_stride or spec.map_stride
         self.n_query = self.n_query or spec.n_query
+        self.db_sub = spec.db_sub or self.db_sub
         # 检索覆盖 (数据集特定; spec 为 0 则保持上面全局默认。强感知混叠场景调严)
         self.retrieval_radius_m = spec.retrieval_radius_m or self.retrieval_radius_m
         self.anchor_topm = spec.anchor_topm or self.anchor_topm

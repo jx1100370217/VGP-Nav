@@ -19,6 +19,7 @@ class DatasetSpec:
     cam_params: str = ""            # 相机内参 ("" → memory-nav/cam/params.yaml(MEI); 或 camera_param.json(KB4鱼眼))
     map_stride: int = 1             # 轨迹帧抽样步长 (长序列调大)
     n_query: int = 25               # 评测 query 帧数
+    db_sub: int = 0                 # DB 抽样步长: 0→用 config 默认(每3帧取1作DB); 1→密DB(query held-out, 其余全做DB, 定位更准)
     # 检索覆盖 (0 → 用 config 全局默认): 强感知混叠场景(开放工位高度重复)调严,
     # 以 VPR best 为锚 + 小半径 + 少 refs, 剔除视觉像但物理远的误匹配工位。
     retrieval_radius_m: float = 0.0
@@ -55,6 +56,7 @@ DATASETS = {
         # 开放办公区工位高度重复 → 强感知混叠: VPR best 准但多样性选择会拖入远工位污染定位。
         # 实测 best锚+r3+k5 把定位中位 5.40→2.25m, 选中的远工位ref 6→1.6个。
         retrieval_radius_m=3.0, anchor_topm=1, k_refs=5,
+        db_sub=1,                   # 密DB(170 DB, 间距~1.8m): best 更贴 query, 定位精度被 DB 间距卡住, 密化进一步降误差
     ),
     # 深港国际 C8 (Mapping_C8): DEEPROUTE 一层, 626帧×4 鱼眼, MEI 相机模型(params.yaml)。
     # 相机离地 1.3m; cam_layout 前左1/前右2/后左4/后右3。VGP-Nav 最早的测试数据集。
