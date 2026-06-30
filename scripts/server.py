@@ -97,6 +97,28 @@ def api_datasets():
                     for n in DATASETS])
 
 
+# ──────────────────── 建图质量评估 ────────────────────
+@app.route("/api/quality/<ds>")
+def api_quality(ds):
+    p = os.path.join(out_dir(ds), "quality.json")
+    if not os.path.exists(p):
+        return jsonify({"error": "尚未评估, 点「运行评估」生成"}), 404
+    return jsonify(json.load(open(p)))
+
+
+@app.route("/api/quality/<ds>/run", methods=["POST"])
+def api_quality_run(ds):
+    try:
+        env = dict(os.environ, VGPNAV_DATASET=ds)
+        r = subprocess.run([PY, os.path.join(_PROJ, "scripts", "assess_quality.py")],
+                           env=env, timeout=300, capture_output=True, text=True)
+        if not os.path.exists(os.path.join(out_dir(ds), "quality.json")):
+            return jsonify({"error": (r.stderr or r.stdout or "评估失败")[-300:]}), 500
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ──────────────────── 建图流程: 状态/运行/日志 ────────────────────
 @app.route("/api/pipeline/<ds>/status")
 def api_pipeline_status(ds):

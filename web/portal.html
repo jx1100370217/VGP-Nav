@@ -47,6 +47,20 @@ iframe{width:100%;height:100%;border:0;background:var(--bg)}
 .fcam{position:relative;overflow:hidden;border-radius:4px;background:#070b14}.fcam img{width:100%;height:100%;object-fit:cover;display:block}
 .flbl{position:absolute;top:2px;left:2px;font-size:9px;background:rgba(6,10,18,.7);color:var(--cyan);padding:1px 4px;border-radius:3px}
 .fwd{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:9px;color:var(--amber);z-index:2;pointer-events:none}
+.qbody{display:flex;flex-direction:column;gap:14px}
+.qhead{padding:12px 16px;border-radius:10px;font-size:14px;border:1px solid var(--line)}
+.qhead b{font-size:15px}
+.qhead.good{background:rgba(92,255,157,.12);border-color:rgba(92,255,157,.5);color:var(--green)}
+.qhead.warn{background:rgba(255,207,72,.12);border-color:rgba(255,207,72,.5);color:var(--amber)}
+.qhead.bad{background:rgba(255,42,109,.12);border-color:rgba(255,42,109,.5);color:var(--mag)}
+.qscores{display:flex;flex-wrap:wrap;gap:8px}
+.qscore{display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:8px;font-size:12px;border:1px solid var(--line);background:var(--panel)}
+.qscore b{font-weight:700}.qscore.good b{color:var(--green)}.qscore.warn b{color:var(--amber)}.qscore.bad b{color:var(--mag)}.qscore.na b{color:var(--dim)}
+.qmets{display:flex;flex-wrap:wrap;gap:14px}
+.qcat{flex:1;min-width:240px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px}
+.qcat h4{font-size:12px;color:var(--cyan);margin-bottom:8px}
+.qcat table{width:100%;border-collapse:collapse;font-size:11.5px}
+.qcat td{padding:4px 6px;border-bottom:1px solid rgba(45,226,230,.1)}.qcat td:first-child{color:var(--dim)}.qcat td:last-child{color:var(--txt);text-align:right;font-weight:600}
 </style></head>
 <body>
 <div id="app">
@@ -56,6 +70,7 @@ iframe{width:100%;height:100%;border:0;background:var(--bg)}
     <button class="mtab on" data-v="build">🏗️ 建图流程</button>
     <button class="mtab" data-v="nav">🧭 导航演示</button>
     <button class="mtab" data-v="db">📍 DB节点管理</button>
+    <button class="mtab" data-v="quality">📊 质量评估</button>
   </div>
   <div class="dssel"><span class="lbl">地图:</span><span id="dstabs"></span></div>
 </header>
@@ -81,12 +96,18 @@ iframe{width:100%;height:100%;border:0;background:var(--bg)}
       <div class="dbside"><h3>节点 · 4环视</h3><div class="fpv4" id="db4"></div><div id="dbInfo" class="muted">← 点左侧节点查看4路环视</div></div>
     </div>
   </section>
+  <section id="qualityView" class="view">
+    <div class="vhead"><h2 id="qTitle">📊 建图质量评估</h2>
+      <button class="btn" id="qRun" style="flex:0 0 auto">▶ 运行评估</button>
+      <span class="muted">5 类指标(覆盖 / 轨迹一致性 / 回环闭合 / 定位精度 / 占据连通) + good·warn·bad 评分</span></div>
+    <div id="qBody" class="qbody"><div class="muted">加载中…</div></div>
+  </section>
 </main>
 </div>
 <script>
 let curDS=null,curTab='build',_poll=null,_curStep=null,_meta={},_queue=[],_layout=null,_nodes=[];
 const $=id=>document.getElementById(id);
-const views={build:$('buildView'),nav:$('navView'),db:$('dbView')};
+const views={build:$('buildView'),nav:$('navView'),db:$('dbView'),quality:$('qualityView')};
 fetch('/api/datasets').then(r=>r.json()).then(ds=>{
   const built=ds.filter(d=>d.built),box=$('dstabs');
   built.forEach((d,i)=>{const b=document.createElement('button');b.className='dtab'+(i===0?' on':'');b.textContent=d.label;b.dataset.ds=d.name;b.onclick=()=>switchDS(d.name);box.appendChild(b);});
@@ -101,6 +122,7 @@ function renderTab(){ if(!curDS)return;
   if(curTab==='build')loadPipeline();
   else if(curTab==='nav'){const u='/'+curDS+'/web/index.html';if($('navFrame').src.indexOf(u)<0)$('navFrame').src=u;}
   else if(curTab==='db')loadDB();
+  else if(curTab==='quality')loadQuality();
 }
 // 建图
 function loadPipeline(){ fetch('/api/pipeline/'+curDS+'/status').then(r=>r.json()).then(r=>{
@@ -149,4 +171,25 @@ $('addBtn').onclick=()=>{const f=parseInt($('addFrame').value),name=$('addName')
 function showNode(n){buildGrid('db4');
   document.querySelectorAll('#db4 img').forEach(img=>{const c=img.dataset.c;img.onerror=function(){this.style.opacity=.15;};img.src='/'+curDS+'/web/thumbs/n'+n.idx+'_c'+c+'.jpg';});
   $('dbInfo').innerHTML='节点 #'+n.idx+' · 帧 '+n.frame_idx+'<br>'+(n.name||'未命名')+'<br>('+n.x+', '+n.y+') m';}
+// 质量评估
+const QNAMES={good:'良好',warn:'一般',bad:'差',na:'—'};
+function loadQuality(){const b=$('qBody');$('qTitle').textContent='📊 建图质量评估 · '+curDS;
+  b.innerHTML='<div class="muted">加载中…</div>';
+  fetch('/api/quality/'+curDS).then(r=>r.json()).then(m=>{
+    if(m.error){b.innerHTML='<div class="muted">'+m.error+'</div>';return;}renderQuality(m);});}
+function renderQuality(m){const b=$('qBody');const ov=m['总评']||'';
+  const oc=ov.indexOf('良好')>=0?'good':(ov.indexOf('一般')>=0?'warn':'bad');
+  const score=m['评分']||{};
+  const scoreHtml=Object.entries(score).map(([k,v])=>'<div class="qscore '+v+'"><span>'+k+'</span><b>'+(QNAMES[v]||v)+'</b></div>').join('');
+  const cats={'A 覆盖度':'A_','B 轨迹一致性':'B_','C 回环闭合':'C_','D 定位精度':'D_','E 占据连通':'E_'};
+  const metHtml=Object.entries(cats).map(([cn,pre])=>{
+    const rows=Object.entries(m).filter(([k])=>k.startsWith(pre)).map(([k,v])=>
+      '<tr><td>'+k.slice(2)+'</td><td>'+(Array.isArray(v)?v.join(' × '):(v===null?'—':v))+'</td></tr>').join('');
+    return '<div class="qcat"><h4>'+cn+'</h4><table>'+rows+'</table></div>';}).join('');
+  b.innerHTML='<div class="qhead '+oc+'">总评: <b>'+ov+'</b>'+
+    (m['待优化项']&&m['待优化项'].length?' &nbsp;·&nbsp; 待优化: '+m['待优化项'].join('、'):'')+'</div>'+
+    '<div class="qscores">'+scoreHtml+'</div><div class="qmets">'+metHtml+'</div>';}
+$('qRun').onclick=()=>{$('qBody').innerHTML='<div class="muted">评估中(约 1 分钟)…</div>';
+  fetch('/api/quality/'+curDS+'/run',{method:'POST'}).then(r=>r.json()).then(r=>{
+    if(r.error){$('qBody').innerHTML='<div class="muted">⚠ '+r.error+'</div>';return;}loadQuality();});};
 </script></body></html>
